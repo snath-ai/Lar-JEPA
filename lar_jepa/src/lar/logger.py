@@ -5,6 +5,29 @@ import hmac
 import hashlib
 from typing import List, Dict, Any, Optional
 
+class TensorSafeEncoder(json.JSONEncoder):
+    """
+    Safely stringifies abstract math tensors (PyTorch/Numpy) from JEPAs or World Models
+    without crashing the JSON serialization of the Audit Logger.
+    """
+    def default(self, obj):
+        # Gracefully handle multi-dimensional arrays without iterating massive lists
+        if hasattr(obj, "shape") and hasattr(obj, "dtype"):
+            shape_val = obj.shape
+            if hasattr(shape_val, "__iter__"):
+                shape_val = list(shape_val)
+            else:
+                shape_val = str(shape_val)
+                
+            return {
+                "__type__": "Tensor/Array",
+                "shape": shape_val,
+                "dtype": str(obj.dtype)
+            }
+        try:
+            return super().default(obj)
+        except TypeError:
+            return f"<Non-serializable object: {type(obj).__name__}>"
 
 class AuditLogger:
     """
@@ -81,7 +104,7 @@ class AuditLogger:
 
         try:
             with open(filename, "w") as f:
-                json.dump(log_data, f, indent=2)
+                json.dump(log_data, f, indent=2, cls=TensorSafeEncoder)
             print(f"\n[AuditLogger] Log saved to: {filename}")
         except Exception as e:
             print(f"\n[AuditLogger] Failed to save log: {e}")
@@ -99,7 +122,7 @@ class AuditLogger:
         clean_payload = {k: v for k, v in payload.items() if k != "signature"}
         
         # Canonicalize JSON (sorted keys, no extra spaces)
-        payload_str = json.dumps(clean_payload, sort_keys=True, separators=(',', ':'))
+        payload_str = json.dumps(clean_payload, sort_keys=True, separators=(',', ':'), cls=TensorSafeEncoder)
         
         mac = hmac.new(
             self.hmac_secret.encode('utf-8'),

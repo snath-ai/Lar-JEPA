@@ -45,12 +45,13 @@ The **Default Mode Network (DMN)** provides episodic memory and solves catastrop
 If you are training World Models, you shouldn't have to build custom, brittle `while True` loops just to test them in embodied environments.
 
 1. **Out-of-the-Box Determinism:** Plug your JEPA directly into a Lár `PredictiveNode`. Let the framework handle state transport, error-handling, and safety rollbacks.
-2. **System 1 / System 2 Testing:** Formally measure the difference between fast-reflex execution (System 1) and deep-simulation planning (System 2) using built-in `RouterNodes`.
-3. **Continuous Learning:** Use the DMN "Sleep Cycle" architecture to publish and iterate on long-term heuristic consolidation.
+2. **Native Tensor Logging:** The `AuditLogger` in this repository has been custom-patched with a `TensorSafeEncoder`. You can pass massive PyTorch/Numpy tensors natively through the execution graph, and the Logger will gracefully serialize them into metadata (`{ "__type__": "Tensor", "shape": [1, 768] }`) instead of crashing the JSON stringifier.
+3. **System 1 / System 2 Testing:** Formally measure the difference between fast-reflex execution (System 1) and deep-simulation planning (System 2) using built-in `RouterNodes`.
+4. **Continuous Learning:** Use the DMN "Sleep Cycle" architecture to publish and iterate on long-term heuristic consolidation.
 
 ---
 
-## 🚀 The Proof of Concept
+##  The Proof of Concept
 Run the standalone simulation today to see Lár orchestrating a conceptual world model without generating a single word of English text. 
 
 *In this simulation, a mock JEPA evaluates accelerating toward a wall. The Lár System 2 Router analyzes the predicted numerical state, detects the impending collision locally, vetoes the action, triggers a replanning phase, and safely halts the robot.*
