@@ -1,6 +1,6 @@
 <div align="center">
 
-# Lár-JEPA: Orchestrating World Models (A Post-LLM Architecture)
+# Lar-JEPA: Orchestrating World Models (A Post-LLM Architecture)
 **A deterministic execution spine and cognitive memory layer for Predictive Architectures.**
 
 </div>
@@ -8,34 +8,60 @@
 ---
 
 ## The Autoregressive Bottleneck
-The AI industry is obsessed with trying to prompt-engineer text-predicting LLMs into becoming autonomous agents. But chatbots are not agents, and predicting the next token is not general intelligence.
+For the past three years, AI research has focused heavily on **Prompt Engineering** autoregressive Large Language Models (LLMs) to create autonomous agents. Frameworks like LangChain, AutoGPT, and ReAct operate on a fundamental assumption: *The mind of the agent is a sequence of conversational text.*
 
-When an LLM hallucinated a bad action on step 3 of a 50-step plan, the entire execution is doomed because its "memory" is just a massive, linear string of text shoved into a context window.
+**This approach is hitting a wall.**
+When an LLM agent hallucinates a poorly reasoned action on step 3 of a 50-step plan, the entire execution is doomed. Why? Because its "memory" is simply a massive, linear string of text appended to a context window. LLMs do not inherently understand physics, spatial logic, or long-term consequence; they predict the most statistically probable next token. 
 
 ## The Post-LLM Paradigm (JEPA)
-Yann LeCun’s **JEPA (Joint Embedding Predictive Architecture)** solves this. JEPAs do not predict the next word; they predict the abstract *state of the world*. They learn to ignore irrelevant noise and focus on the conceptual mechanics of a problem. They allow an agent to imagine different actions and predict the outcomes in a hidden mathematical representation space *before* acting physically.
+Yann LeCun’s **Joint Embedding Predictive Architecture (JEPA)** offers a profound paradigm shift. 
+JEPAs (like V-JEPA or I-JEPA) do not predict the next word; they predict the abstract *state of the world*. They learn to ignore irrelevant background noise and focus on the conceptual mechanics of a problem. 
 
-But how do you route an abstract mathematical space? 
-**You need a Nervous System.**
+A JEPA allows an agent to imagine different actions and predict the environmental outcomes in a hidden mathematical representation space (latent tensors) *before* committing to a physical action.
+
+**The Orchestration Problem:**
+How do you route an abstract mathematical space? 
+Current orchestration frameworks are entirely text-dependent. If your state-of-the-art World Model outputs a 768-dimensional tensor symbolizing a "crash," traditional frameworks crash.
+**You need a new Nervous System.**
 
 ---
 
 ## The Trio Architecture
-This repository contains the three pillars of a true Cognitive Architecture:
+This repository contains the three pillars of a true Cognitive Architecture, designed specifically for researchers building non-LLM, predictive agents:
 
-1. **The World Simulator (JEPA):** Predicts possible futures and plans the best path to a goal without getting bogged down in token-by-token generation.
-2. **The Execution Spine (Lár):** A deterministic, topological DAG framework. It passes the abstract latent tensors (the JEPA predictions) through strict `RouterNodes`, evaluating the mathematical danger of a future state and adapting *before* the action hits the real world.
-3. **The Cognitive Memory (DMN):** The Default Mode Network. It watches the Lár execution logs all day. When the agent "sleeps," DMN consolidates those expensive JEPA simulations into cheap, permanent "muscle memory" heuristics, solving catastrophic forgetting.
+### 1. The World Simulator (JEPA)
+The "Imagination." This model predicts possible future states. It plans the best path to a goal by hallucinating consequences in a latent mathematical space, completely bypassing token-by-token text generation.
 
-## The Proof of Concept
-Run the standalone simulation today to see Lár orchestrating a world model without generating a single word of English text:
+### 2. The Execution Spine (Lár)
+Lár is a deterministic, topological DAG (Directed Acyclic Graph) framework, originally designed as "PyTorch for Agents." 
+Unlike text-based frameworks, Lár passes a flexible `GraphState`. It can seamlessly pass massive, dense latent tensors (the JEPA predictions) through strict `RouterNodes`. Lár evaluates the mathematical danger or reward of a future state and reroutes the execution flow *before* the action hits the real world.
+
+### 3. The Cognitive Memory (DMN)
+The **Default Mode Network (DMN)** provides episodic memory and solves catastrophic forgetting. It watches the Lár execution logs in the background. When the agent "sleeps," the DMN scans the day's successes and failures. It consolidates those expensive, slow JEPA simulations into cheap, permanent "muscle memory" heuristics—meaning the agent continually learns from its environment without requiring immediate retraining.
+
+---
+
+## Why Researchers Need Lar-JEPA
+If you are training World Models, you shouldn't have to build custom, brittle `while True` loops just to test them in embodied environments.
+
+1. **Out-of-the-Box Determinism:** Plug your JEPA directly into a Lár `PredictiveNode`. Let the framework handle state transport, error-handling, and safety rollbacks.
+2. **System 1 / System 2 Testing:** Formally measure the difference between fast-reflex execution (System 1) and deep-simulation planning (System 2) using built-in `RouterNodes`.
+3. **Continuous Learning:** Use the DMN "Sleep Cycle" architecture to publish and iterate on long-term heuristic consolidation.
+
+---
+
+## 🚀 The Proof of Concept
+Run the standalone simulation today to see Lár orchestrating a conceptual world model without generating a single word of English text. 
+
+*In this simulation, a mock JEPA evaluates accelerating toward a wall. The Lár System 2 Router analyzes the predicted numerical state, detects the impending collision locally, vetoes the action, triggers a replanning phase, and safely halts the robot.*
 
 ```bash
-cd lar_jepa
+cd lar_jepa/lar
+poetry install
 poetry run python examples/advanced/13_world_model_jepa.py
 ```
 
-### The Output:
+### The Output Trace:
 ```
 ==================================================
  LÁR JEPA WORLD MODEL DEMO
