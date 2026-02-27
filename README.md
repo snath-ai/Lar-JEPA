@@ -70,7 +70,6 @@ Run the standalone simulation today to see Lár orchestrating a conceptual world
 *In this simulation, a mock JEPA evaluates accelerating toward a wall. The Lár System 2 Router analyzes the predicted numerical state, detects the impending collision locally, vetoes the action, triggers a replanning phase, and safely halts the robot.*
 
 ```bash
-cd lar_jepa/lar
 poetry install
 poetry run python examples/advanced/13_world_model_jepa.py
 ```
