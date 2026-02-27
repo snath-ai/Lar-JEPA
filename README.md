@@ -32,8 +32,8 @@ This repository contains the three pillars of a true Cognitive Architecture, des
 ### 1. The World Simulator (JEPA)
 The "Imagination." This model predicts possible future states. It plans the best path to a goal by hallucinating consequences in a latent mathematical space, completely bypassing token-by-token text generation.
 
-### 2. The Execution Spine (Lár)
-Lár is a deterministic, topological DAG (Directed Acyclic Graph) framework, originally designed as "PyTorch for Agents." 
+### 2. The Execution Spine ([Lár](https://github.com/snath-ai/lar))
+[Lár](https://github.com/snath-ai/lar) is a deterministic, topological DAG (Directed Acyclic Graph) framework, originally designed as "PyTorch for Agents." 
 Unlike text-based frameworks, Lár passes a flexible `GraphState`. It can seamlessly pass massive, dense latent tensors (the JEPA predictions) through strict `RouterNodes`. Lár evaluates the mathematical danger or reward of a future state and reroutes the execution flow *before* the action hits the real world.
 
 ### 3. The Cognitive Memory (DMN)
@@ -41,13 +41,17 @@ The **Default Mode Network (DMN)** provides episodic memory and solves catastrop
 
 ---
 
-## Why Researchers Need Lar-JEPA
-If you are training World Models, you shouldn't have to build custom, brittle `while True` loops just to test them in embodied environments.
+## Why Lár is the Premier Framework for World Models
+Most agentic frameworks (LangChain, AutoGPT, CrewAI) were built for chatbots. They rely on prompting LLMs to output conversational text and parsing those strings to decide what to do next. 
 
-1. **Out-of-the-Box Determinism:** Plug your JEPA directly into a Lár `PredictiveNode`. Let the framework handle state transport, error-handling, and safety rollbacks.
+If you are training World Models (like JEPAs), your model doesn't output text—it outputs **high-dimensional mathematical tensors** representing the abstract state of a physical environment. 
+
+**Lár is structurally superior for World Models because:**
+1. **Mathematical Routing (No Prompting):** You don't prompt Lár. You write deterministic Python `RouterNodes` that evaluate the latent tensors directly (e.g., `if collision_probability > 0.85: return "REPLAN"`).
 2. **Native Tensor Logging:** The `AuditLogger` in this repository has been custom-patched with a `TensorSafeEncoder`. You can pass massive PyTorch/Numpy tensors natively through the execution graph, and the Logger will gracefully serialize them into metadata (`{ "__type__": "Tensor", "shape": [1, 768] }`) instead of crashing the JSON stringifier.
-3. **System 1 / System 2 Testing:** Formally measure the difference between fast-reflex execution (System 1) and deep-simulation planning (System 2) using built-in `RouterNodes`.
-4. **Continuous Learning:** Use the DMN "Sleep Cycle" architecture to publish and iterate on long-term heuristic consolidation.
+3. **Out-of-the-Box Determinism:** Plug your JEPA directly into a Lár `PredictiveNode`. Let the framework handle state transport, error-handling, and safety rollbacks without LLM hallucinations breaking the loop.
+4. **System 1 / System 2 Testing:** Formally measure the difference between fast-reflex execution (System 1) and deep-simulation planning (System 2) using built-in `RouterNodes`.
+5. **Continuous Learning:** Use the DMN "Sleep Cycle" architecture to publish and iterate on long-term heuristic consolidation.
 
 ---
 
