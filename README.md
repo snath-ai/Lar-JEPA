@@ -7,12 +7,12 @@
 
 ---
 
-## 🛑 The Autoregressive Bottleneck
+## The Autoregressive Bottleneck
 The AI industry is obsessed with trying to prompt-engineer text-predicting LLMs into becoming autonomous agents. But chatbots are not agents, and predicting the next token is not general intelligence.
 
 When an LLM hallucinated a bad action on step 3 of a 50-step plan, the entire execution is doomed because its "memory" is just a massive, linear string of text shoved into a context window.
 
-## 🧠 The Post-LLM Paradigm (JEPA)
+## The Post-LLM Paradigm (JEPA)
 Yann LeCun’s **JEPA (Joint Embedding Predictive Architecture)** solves this. JEPAs do not predict the next word; they predict the abstract *state of the world*. They learn to ignore irrelevant noise and focus on the conceptual mechanics of a problem. They allow an agent to imagine different actions and predict the outcomes in a hidden mathematical representation space *before* acting physically.
 
 But how do you route an abstract mathematical space? 
@@ -20,14 +20,14 @@ But how do you route an abstract mathematical space?
 
 ---
 
-## 🏗️ The Trio Architecture
+## The Trio Architecture
 This repository contains the three pillars of a true Cognitive Architecture:
 
 1. **The World Simulator (JEPA):** Predicts possible futures and plans the best path to a goal without getting bogged down in token-by-token generation.
 2. **The Execution Spine (Lár):** A deterministic, topological DAG framework. It passes the abstract latent tensors (the JEPA predictions) through strict `RouterNodes`, evaluating the mathematical danger of a future state and adapting *before* the action hits the real world.
 3. **The Cognitive Memory (DMN):** The Default Mode Network. It watches the Lár execution logs all day. When the agent "sleeps," DMN consolidates those expensive JEPA simulations into cheap, permanent "muscle memory" heuristics, solving catastrophic forgetting.
 
-## 🚀 The Proof of Concept
+## The Proof of Concept
 Run the standalone simulation today to see Lár orchestrating a world model without generating a single word of English text:
 
 ```bash
