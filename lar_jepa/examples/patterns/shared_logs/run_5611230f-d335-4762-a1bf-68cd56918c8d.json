@@ -1,0 +1,38 @@
+{
+  "run_id": "5611230f-d335-4762-a1bf-68cd56918c8d",
+  "user_id": null,
+  "timestamp": "2026-01-30T14:57:18.577572",
+  "steps": [
+    {
+      "step": 0,
+      "node": "LLMNode",
+      "state_before": {},
+      "state_diff": {
+        "added": {
+          "greeting": "Hello! How can I assist you today? \ud83d\ude0a"
+        },
+        "removed": {},
+        "updated": {}
+      },
+      "run_metadata": {
+        "prompt_tokens": 16,
+        "output_tokens": 12,
+        "total_tokens": 28,
+        "model": "ollama/phi4"
+      },
+      "outcome": "success",
+      "state_after": {
+        "greeting": "Hello! How can I assist you today? \ud83d\ude0a"
+      }
+    }
+  ],
+  "summary": {
+    "total_steps": 1,
+    "total_prompt_tokens": 16,
+    "total_completion_tokens": 12,
+    "total_tokens": 28,
+    "tokens_by_model": {
+      "ollama/phi4": 28
+    }
+  }
+}

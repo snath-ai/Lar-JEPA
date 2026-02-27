@@ -1,0 +1,263 @@
+
+import json
+import logging
+from typing import Dict, List, Optional, Any, Type
+from .node import BaseNode, LLMNode, ToolNode, RouterNode, BatchNode
+from .state import GraphState
+
+# --- Safety/Validator ---
+
+class SecurityError(Exception):
+    """Raised when a dynamic graph violates safety policy."""
+    pass
+
+class TopologyValidator:
+    """
+    Static analysis for dynamic graphs.
+    Enforces:
+    1. No infinite loops (cycle detection).
+    2. Allowlist of Tools/Node Types.
+    3. Structural integrity (all next_node refs exist).
+    """
+    def __init__(self, allowed_tools: List[callable] = None):
+        self.allowed_tools = {t.__name__: t for t in (allowed_tools or [])}
+
+    def validate(self, graph_spec: Dict[str, Any]) -> bool:
+        """
+        Validates the JSON GraphSpec.
+        Raises SecurityError if invalid.
+        """
+        nodes = graph_spec.get("nodes", [])
+        if not nodes:
+            raise SecurityError("GraphSpec must contain at least one node.")
+
+        node_ids = {n["id"] for n in nodes}
+        
+        # 1. Structural Integrity
+        for n in nodes:
+            # Check 'next' pointer
+            nxt = n.get("next")
+            if nxt and nxt != "__end__" and nxt not in node_ids:
+                raise SecurityError(f"Node '{n.get('id')}' links to non-existent node '{nxt}'.")
+
+        # 2. Cycle Detection (DFS)
+        # Simplified: We build an adjacency map
+        adj = {n["id"]: [] for n in nodes}
+        for n in nodes:
+            nxt = n.get("next")
+            if nxt and nxt in node_ids:
+                adj[n["id"]].append(nxt)
+            
+            # RouterNode special handling for multiple paths
+            if n.get("type") == "RouterNode":
+                routes = n.get("routes", {})
+                for k, target_id in routes.items():
+                    if target_id in node_ids:
+                        adj[n["id"]].append(target_id)
+
+        visited = set()
+        path = set()
+
+        def visit(node_id):
+            visited.add(node_id)
+            path.add(node_id)
+            for neighbor in adj[node_id]:
+                if neighbor not in visited:
+                    if visit(neighbor):
+                        return True
+                elif neighbor in path:
+                    return True # Cycle detected
+            path.remove(node_id)
+            return False
+
+        for n_id in node_ids:
+            if n_id not in visited:
+                if visit(n_id):
+                    raise SecurityError(f"Infinite loop detected in dynamic subgraph involving node '{n_id}'.")
+
+        # 3. Tool Allowlist
+        for n in nodes:
+            if n.get("type") == "ToolNode":
+                tool_name = n.get("tool_name")
+                if self.allowed_tools and tool_name not in self.allowed_tools:
+                    raise SecurityError(f"Tool '{tool_name}' is not in the allowlist.")
+
+        return True
+
+
+# --- The Primitive ---
+
+class DynamicNode(BaseNode):
+    """
+    A metacognitive primitive that asks an LLM to design a subgraph
+    at runtime, validates it, and then executes it.
+    """
+    def __init__(self,
+                 llm_model: str,
+                 prompt_template: str,
+                 validator: TopologyValidator,
+                 next_node: BaseNode = None,
+                 context_keys: List[str] = [],
+                 system_instruction: str = None):
+        """
+        Args:
+            llm_model: Model to generate the graph JSON.
+            prompt_template: Prompt asking for the JSON (must include instructions for the schema).
+            validator: TopologyValidator instance to enforce safety.
+            next_node: The node to jump to AFTER the dynamic subgraph finishes.
+            context_keys: State keys to pass to the LLM.
+        """
+        self.llm_node = LLMNode(
+            model_name=llm_model,
+            prompt_template=prompt_template,
+            output_key="__graph_spec_json__",
+            system_instruction=system_instruction or "You are a software architect. Output ONLY valid JSON representing a Lár Graph."
+        )
+        self.validator = validator
+        self.next_node = next_node # The "Exit" of the subgraph flows here
+        self.context_keys = context_keys
+
+    def execute(self, state: GraphState):
+        print("\n" + "="*40)
+        print("  🧠 DYNAMIC NODE: Metacognition Active")
+        print("="*40)
+
+        # 1. Run LLM to get GraphSpec
+        # We manually inject instructions into the prompt about the expected JSON format
+        schema_instruction = (
+            "\nOutput a JSON object with this schema:\n"
+            "{\n"
+            '  "nodes": [\n'
+            '    {"id": "step1", "type": "LLMNode", "prompt": "...", "output_key": "res", "next": "step2"},\n'
+            '    {"id": "step2", "type": "ToolNode", "tool_name": "my_func", "input_keys": ["res"], "output_key": "final", "next": null}\n'
+            '  ],\n'
+            '  "entry_point": "step1"\n'
+            "}\n"
+            "Use 'next': null to indicate the end of the subgraph (which will proceed to the main graph)."
+        )
+        
+        # Inject context manually if needed, or rely on prompt_template having {context}
+        # For this primitive, we'll append the schema instruction to the LLMNode's internal prompt implicitly
+        # (This is a simplified implementation; in production we might compose prompts more carefully)
+        original_template = self.llm_node.prompt_template
+        self.llm_node.prompt_template += schema_instruction
+        
+        # Execute the internal LLMNode to populate state["__graph_spec_json__"]
+        self.llm_node.execute(state)
+        
+        # Restore template
+        self.llm_node.prompt_template = original_template
+
+        raw_json = state.get("__graph_spec_json__")
+        # Clean markdown code blocks if present
+        if "```json" in raw_json:
+            raw_json = raw_json.split("```json")[1].split("```")[0]
+        elif "```" in raw_json:
+            raw_json = raw_json.split("```")[1].split("```")[0]
+            
+        try:
+            spec = json.loads(raw_json.strip())
+        except json.JSONDecodeError:
+            print("  [DynamicNode] ERROR: LLM returned invalid JSON.")
+            return self.next_node # Fallback: Skip dynamic step
+
+        # 2. Validate
+        try:
+            self.validator.validate(spec)
+            print("  [TopologyValidator]: Graph Spec Verified. ✅")
+        except SecurityError as e:
+            print(f"  [TopologyValidator] REJECTED: {e}")
+            return self.next_node # Fallback
+
+        # 3. Instantiate and Wire
+        # We need a way to map spec "types" to actual classes and "tool_names" to functions.
+        # This requires a factory context. For now, we assume simple LLMNode/ToolNode/RouterNode support.
+        
+        node_map: Dict[str, BaseNode] = {}
+        
+        # First Pass: Instantiate Nodes (without next_node pointers)
+        nodes_data = spec.get("nodes", [])
+        for n in nodes_data:
+            nid = n["id"]
+            ntype = n["type"]
+            
+            if ntype == "LLMNode":
+                node_map[nid] = LLMNode(
+                    model_name=n.get("model", self.llm_node.model_name), # Inherit model if not specified
+                    prompt_template=n.get("prompt", ""),
+                    output_key=n.get("output_key", "dynamic_out"),
+                    next_node=None # Wired in Pass 2
+                )
+            elif ntype == "ToolNode":
+                # We need the actual function from the validator's allowlist
+                tname = n.get("tool_name")
+                func = self.validator.allowed_tools.get(tname)
+                if not func:
+                    print(f"  [DynamicNode] Error: Tool '{tname}' not found in allowlist map.")
+                    continue
+                
+                node_map[nid] = ToolNode(
+                    tool_function=func,
+                    input_keys=n.get("input_keys", []),
+                    output_key=n.get("output_key"),
+                    next_node=None # Wired in Pass 2
+                )
+            elif ntype == "BatchNode":
+                # [NEW] Support for BatchNode
+                # BatchNode only takes 'nodes' and 'next_node'
+                node_map[nid] = BatchNode(
+                    nodes=[], # Will be filled in Pass 2
+                    next_node=None 
+                )
+                # Store metadata to help wiring later
+                node_map[nid]._pending_concurrent_ids = n.get("concurrent_nodes", [])
+            elif ntype == "DynamicNode":
+                # [NEW] Recursive Metacognition (Fractal Agency)
+                # The child DynamicNode needs a model, prompt, and the same validator.
+                child_prompt = n.get("prompt", "Design a sub-graph.")
+                
+                # We instantiate the class recursively
+                node_map[nid] = DynamicNode(
+                    llm_model=n.get("model", self.llm_node.model_name),
+                    prompt_template=child_prompt,
+                    validator=self.validator, # Inherit safety rails
+                    next_node=None # Wired in Pass 2
+                )
+            # Add more types as needed (Router, Batch)
+        
+        # Second Pass: Wire 'next_node' and 'BatchNode.nodes'
+        for n in nodes_data:
+            nid = n["id"]
+            node_obj = node_map.get(nid)
+            if not node_obj: continue 
+            
+            # 2a. Wire 'next'
+            next_id = n.get("next")
+            if next_id:
+                if next_id in node_map:
+                    node_obj.next_node = node_map[next_id]
+                else:
+                    print(f"  [DynamicNode] Warning: Node '{nid}' points to unknown next '{next_id}'.")
+            else:
+                # If next is null/None, it flows to the DynamicNode's configured 'next_node' (Rejoining main graph)
+                node_obj.next_node = self.next_node
+            
+            # 2b. Wire 'BatchNode' concurrent nodes
+            if isinstance(node_obj, BatchNode) and hasattr(node_obj, "_pending_concurrent_ids"):
+                concurrent_nodes = []
+                for cid in node_obj._pending_concurrent_ids:
+                    if cid in node_map:
+                        concurrent_nodes.append(node_map[cid])
+                    else:
+                        print(f"  [DynamicNode] Warning: BatchNode '{nid}' includes unknown node '{cid}'.")
+                node_obj.nodes = concurrent_nodes
+
+        entry_id = spec.get("entry_point")
+        entry_node = node_map.get(entry_id)
+        
+        if not entry_node:
+            print(f"  [DynamicNode] Error: Entry point '{entry_id}' not found.")
+            return self.next_node
+
+        print(f"  [DynamicNode]: Hot-swapping to subgraph (Entry: {entry_id}, nodes: {len(node_map)})")
+        return entry_node

@@ -1,0 +1,72 @@
+name: Publish Package to PyPI
+
+# Triggers the workflow only when a new release is published
+on:
+  release:
+    types: [published]
+
+# Permissions required for PyPI Trusted Publishing (OIDC)
+permissions:
+  contents: read
+  id-token: write # CRITICAL: Allows GitHub to generate the temporary authentication token
+
+jobs:
+  build_and_test:
+    name: Build & Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11" # Specify your Python version
+
+      - name: Install Poetry and Set PATH
+        # This action reliably installs Poetry and adds it to the PATH
+        uses: snok/install-poetry@v1 
+        with:
+          version: 1.8.2
+          
+      - name: Install Project Dependencies (for Testing)
+        # FIX: Removes --no-root and adds --sync --with dev to install the local 
+        # lar-engine package in editable mode, ensuring tests can 'import lar'.
+        run: poetry install --sync --with dev 
+      
+      - name: Run PyTest
+        run: poetry run pytest tests
+
+      - name: Build Package
+        # Creates the .whl and .tar.gz distribution files
+        run: poetry build
+      
+      - name: Store Distribution Files
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+          
+  pypi_publish:
+    name: Publish to PyPI
+    needs: [build_and_test] # This job only runs if the tests succeed
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: pypi
+      url: https://pypi.org/p/lar-engine/
+      
+    permissions:
+      id-token: write # Must be set again for the publishing job
+
+    steps:
+      - name: Download Distribution Files
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish Package to PyPI
+        # Uses the official PyPA action for secure publishing via OIDC
+        uses: pypa/gh-action-pypi-publish@release/v1

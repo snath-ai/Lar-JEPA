@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "lar-engine"
+version = "1.7.0"
+description = "Lár: The PyTorch for Agents. A 'define-by-run' agentic framework."
+authors = ["Aadithya Vishnu Sajeev <axdithya@snath.ai>"]
+maintainers = ["Aadithya Vishnu Sajeev <axdithya@snath.ai>", "Vinay S <vinay@snath.ai>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [
+    { include = "lar", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+typer = "^0.12.0"
+click = "<8.1.0"
+litellm = "^1.80.0"
+rich = "^14.2.0"
+pydantic = "^2.0.0"
+networkx = "^3.0.0"
+deepdiff = "^8.6.1"
+urllib3 = "^2.6.0"
+filelock = "^3.20.1"
+setuptools = "^78.0.0"
+
+[tool.poetry.scripts]
+lar = "lar.cli:app"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.2"
+python-dotenv = "^1.0.1"
+
+[tool.poetry.group.docs.dependencies] 
+mkdocs = "^1.5.3"
+mkdocs-material = "^9.5.15" 
+pymdown-extensions = "^10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,73 @@
+{
+  "run_id": "f02dac75-b158-4426-97fc-32403d78ceae",
+  "user_id": null,
+  "timestamp": "2026-02-20T00:58:40.401269",
+  "steps": [
+    {
+      "step": 0,
+      "node": "LLMNode",
+      "state_before": {
+        "patient_id": "SUBJ-9921-A",
+        "patient_note": "Patient reports severe chest pain and shortness of breath 2 hours after administering the trial compound. Vitals are unstable."
+      },
+      "state_diff": {
+        "added": {
+          "trial_classification": "ADVERSE_EVENT\n\nThis note describes a situation where the patient is experiencing severe symptoms, including severe chest pain and shortness of breath, accompanied by unstable vitals shortly after administering the trial compound. These are significant findings that could indicate a serious adverse reaction to the medication being tested in the clinical trial. Given the severity and timing of these symptoms, this should be considered a Severe Adverse Event (SAE) requiring immediate escalation for further evaluation and intervention."
+        },
+        "removed": {},
+        "updated": {}
+      },
+      "run_metadata": {
+        "prompt_tokens": 83,
+        "output_tokens": 93,
+        "total_tokens": 176,
+        "model": "ollama/phi4:latest"
+      },
+      "outcome": "success",
+      "state_after": {
+        "patient_id": "SUBJ-9921-A",
+        "patient_note": "Patient reports severe chest pain and shortness of breath 2 hours after administering the trial compound. Vitals are unstable.",
+        "trial_classification": "ADVERSE_EVENT\n\nThis note describes a situation where the patient is experiencing severe symptoms, including severe chest pain and shortness of breath, accompanied by unstable vitals shortly after administering the trial compound. These are significant findings that could indicate a serious adverse reaction to the medication being tested in the clinical trial. Given the severity and timing of these symptoms, this should be considered a Severe Adverse Event (SAE) requiring immediate escalation for further evaluation and intervention."
+      }
+    },
+    {
+      "step": 1,
+      "node": "FunctionalNode",
+      "state_before": {
+        "patient_id": "SUBJ-9921-A",
+        "patient_note": "Patient reports severe chest pain and shortness of breath 2 hours after administering the trial compound. Vitals are unstable.",
+        "trial_classification": "ADVERSE_EVENT\n\nThis note describes a situation where the patient is experiencing severe symptoms, including severe chest pain and shortness of breath, accompanied by unstable vitals shortly after administering the trial compound. These are significant findings that could indicate a serious adverse reaction to the medication being tested in the clinical trial. Given the severity and timing of these symptoms, this should be considered a Severe Adverse Event (SAE) requiring immediate escalation for further evaluation and intervention.",
+        "__last_run_metadata": null
+      },
+      "state_diff": {
+        "added": {
+          "priority": "CRITICAL",
+          "routing_action": "ESCALATED_TO_PHARMACOVIGILANCE"
+        },
+        "removed": {
+          "__last_run_metadata": null
+        },
+        "updated": {}
+      },
+      "run_metadata": null,
+      "outcome": "success",
+      "state_after": {
+        "patient_id": "SUBJ-9921-A",
+        "patient_note": "Patient reports severe chest pain and shortness of breath 2 hours after administering the trial compound. Vitals are unstable.",
+        "trial_classification": "ADVERSE_EVENT\n\nThis note describes a situation where the patient is experiencing severe symptoms, including severe chest pain and shortness of breath, accompanied by unstable vitals shortly after administering the trial compound. These are significant findings that could indicate a serious adverse reaction to the medication being tested in the clinical trial. Given the severity and timing of these symptoms, this should be considered a Severe Adverse Event (SAE) requiring immediate escalation for further evaluation and intervention.",
+        "routing_action": "ESCALATED_TO_PHARMACOVIGILANCE",
+        "priority": "CRITICAL"
+      }
+    }
+  ],
+  "summary": {
+    "total_steps": 2,
+    "total_prompt_tokens": 83,
+    "total_completion_tokens": 93,
+    "total_tokens": 176,
+    "tokens_by_model": {
+      "ollama/phi4:latest": 176
+    }
+  },
+  "signature": "e21eda0dcc4f1226016509c62ce8e8650fc50c8dca109eaf6cc398b4ade6037c"
+}

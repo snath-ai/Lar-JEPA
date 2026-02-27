@@ -1,0 +1,42 @@
+{
+  "run_id": "5c8854c4-2c33-469b-b59d-48215905804a",
+  "user_id": null,
+  "timestamp": "2026-02-20T00:55:39.530518",
+  "steps": [
+    {
+      "step": 0,
+      "node": "LLMNode",
+      "state_before": {
+        "country": "Ireland"
+      },
+      "state_diff": {
+        "added": {
+          "capital": "The capital of Ireland is Dublin. It is located on the east coast of the island and serves as the political, cultural, and economic center of the country."
+        },
+        "removed": {},
+        "updated": {}
+      },
+      "run_metadata": {
+        "prompt_tokens": 20,
+        "output_tokens": 33,
+        "total_tokens": 53,
+        "model": "ollama/phi4:latest"
+      },
+      "outcome": "success",
+      "state_after": {
+        "country": "Ireland",
+        "capital": "The capital of Ireland is Dublin. It is located on the east coast of the island and serves as the political, cultural, and economic center of the country."
+      }
+    }
+  ],
+  "summary": {
+    "total_steps": 1,
+    "total_prompt_tokens": 20,
+    "total_completion_tokens": 33,
+    "total_tokens": 53,
+    "tokens_by_model": {
+      "ollama/phi4:latest": 53
+    }
+  },
+  "signature": "32428c0d0f95d6859414e2baf61027bd82cc3a65200dafc29f4affdba0e93c76"
+}

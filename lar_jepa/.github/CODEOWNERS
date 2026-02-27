@@ -1,0 +1,7 @@
+# Critical Core Logic - Requires Core Maintainer Review
+src/lar/executor.py       @axdithyaxo
+
+pyproject.toml            @axdithyaxo
+
+# Security Logic
+src/lar/node.py           @axdithyaxo

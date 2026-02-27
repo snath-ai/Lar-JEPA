@@ -1,0 +1,84 @@
+site_name: 'Lár - The PyTorch for Agents'
+site_author: Lár Project
+site_description: "The official documentation for Lár: The first Deterministic, Auditable AI Agent Framework. Built on Graph Theory and LiteLLM."
+site_url: https://docs.snath.ai/
+repo_name: snath-ai/lar
+repo_url: https://github.com/snath-ai/lar
+edit_uri: ""
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: black  
+      accent: grey     
+      code:
+        # Sets the background color for code blocks and inline code
+        # We will use a highly visible, light color like white or very light grey.
+        background: "#F5F5F5" 
+        # Sets the foreground (text) color for high contrast
+        foreground: "#1C2132"
+  features:
+    - navigation.tabs
+    - navigation.top
+    - search.suggest
+    - content.code.annotate
+  custom_dir: theme_overrides
+  favicon: 'assets/lar-logo.png'
+  extra_css:
+    - assets/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+# Social Links
+extra:
+  social:
+    - icon: fontawesome/solid/globe
+      link: https://snath.ai
+      name: Return to Snath.ai
+    - icon: fontawesome/brands/github
+      link: https://github.com/snath-ai/lar
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/snath_ai
+
+nav:
+  - 'Home': index.md
+  - 'Getting Started': getting-started.md
+  - 'IDE Setup': ide_setup.md
+  - 'Core Concepts':
+    - 'The "Glass Box" Philosophy': core-concepts/1-philosophy.md
+    - 'The 9 Primitives': core-concepts/2-architecture.md
+    - 'The Audit Log': core-concepts/3-audit-log.md
+    - 'Pattern Library': core-concepts/4-core-patterns.md
+    - 'Reasoning Models (System 2)': core-concepts/5-reasoning-models.md
+    - 'Dynamic Graphs (Metacognition)': core-concepts/9-metacognition.md
+    - 'Defensive Constraints (Budgets)': core-concepts/10-defensive-constraints.md
+  - 'Case Studies':
+    - 'Red Teaming (Security)': case-studies/red-teaming.md
+  - 'Guides':
+    - 'Universal Model Support (LiteLLM)': guides/litellm_setup.md
+
+    - 'Multi-Agent Orchestration': guides/multi-agent-orchestration.md
+    - 'Just-in-Time Integrations': guides/integrations.md
+    - 'Self-Correcting Loops': guides/self-correction-loop.md
+    - 'Deploying Lár (FastAPI)': guides/deployment.md
+
+  - 'Compliance & Safety':
+    - 'Overview': compliance.md
+    - 'For Auditors': compliance/auditor_guide.md
+  - 'API Reference':
+    - 'LLMNode': api-reference/llmnode.md
+    - 'ToolNode': api-reference/toolnode.md
+    - 'RouterNode': api-reference/routernode.md
+    - 'BatchNode': api-reference/batchnode.md
+    - 'DynamicNode': api-reference/dynamicnode.md
+    - 'AddValueNode': api-reference/addvaluenode.md
+    - 'ClearErrorNode': api-reference/clearerrornode.md
+    - 'TopologyValidator': api-reference/topologyvalidator.md
+    - 'Utilities': api-reference/utilities.md
