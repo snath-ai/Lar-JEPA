@@ -3,6 +3,15 @@
 # Lar-JEPA: Orchestrating World Models (A Post-LLM Architecture)
 **A deterministic execution spine and cognitive memory layer for Predictive Architectures.**
 
+<p align="center">
+  <a href="https://github.com/snath-ai/lar">
+    <img alt="Based on" src="https://img.shields.io/badge/Variant%20of-Lár%20Engine-blue?style=for-the-badge">
+  </a>
+  <a href="https://github.com/snath-ai/Lar-JEPA">
+    <img alt="Architecture" src="https://img.shields.io/badge/Architecture-Predictive%20World%20Models-blueviolet?style=for-the-badge">
+  </a>
+</p>
+
 </div>
 
 ---
@@ -94,3 +103,10 @@ poetry run python examples/advanced/13_world_model_jepa.py
 ---
 **Bet on Architecture, not just Compute.** 
 The industry is building the Brain (JEPAs). We are building the Nervous System (Lár + DMN).
+
+---
+
+## License
+**Apache 2.0**.
+
+**Note**: This repository is a **Conceptual Testbed and Showcase** built upon the [Lár Engine](https://github.com/snath-ai/lar). It is intended to demonstrate advanced concepts in Predictive World Models, Mathematical Routing, and Post-LLM orchestration.
