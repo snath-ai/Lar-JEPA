@@ -48,6 +48,9 @@ Unlike text-based frameworks, Lár passes a flexible `GraphState`. It can seamle
 ### 3. The Cognitive Memory (DMN)
 The **Default Mode Network (DMN)** provides episodic memory and solves catastrophic forgetting. It watches the Lár execution logs in the background. When the agent "sleeps," the DMN scans the day's successes and failures. It consolidates those expensive, slow JEPA simulations into cheap, permanent "muscle memory" heuristics—meaning the agent continually learns from its environment without requiring immediate retraining.
 
+### 4. Spatial Kinematics Engine (Domain-Agnostic Physics)
+Located in `spatial_kinematics_engine/`, this module implements N-body spatial modeling workflows. It acts as an inorganic physics simulator predicting dynamic coordinate interactions, trajectory dependencies, and collision heuristics for non-linear multi-body meshes (such as robotic kinematics or planetary orbital collisions). It leverages the Lár graph to veto structurally entropic predictions and route spatial trajectories.
+
 ---
 
 ## Why Lár is the Premier Framework for World Models
