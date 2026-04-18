@@ -236,6 +236,7 @@ This architecture extends and subsumes the following published prior art:
 | [10.5281/zenodo.19245328](https://doi.org/10.5281/zenodo.19245328) | Deterministic Metacognition & JEPA Integration |
 | [10.5281/zenodo.19484646](https://doi.org/10.5281/zenodo.19484646) | Spatial Kinematics Lár-JEPA Framework |
 | [10.5281/zenodo.19516414](https://doi.org/10.5281/zenodo.19516414) | LARA Integrated Cognitive Environment (ICE) |
+| [10.5281/zenodo.19646405](https://doi.org/10.5281/zenodo.19646405) | DMN v3.0 — The Dream Loop (Memory Consolidation, Familiarity-Weighted Retrieval, Learned Graph Executor) |
 
 **Author:** Aadithya Vishnu Sajeev / Snath AI  
 **License:** Apache 2.0
