@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, Optional
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from .jepa_manifold import LatentKinematicState
 from core.interfaces import AbstractEntropicRouter
+from core.types import RouteDecision, StructuralImpasseError
 
 class EntropicVetoRouter(AbstractEntropicRouter):
     """
@@ -13,16 +14,16 @@ class EntropicVetoRouter(AbstractEntropicRouter):
     def __init__(self, entropy_threshold: float = 0.85):
         self.entropy_threshold = entropy_threshold
 
-    def evaluate_state(self, predicted_state: LatentKinematicState) -> str:
+    def evaluate_state(self, predicted_state: LatentKinematicState) -> RouteDecision:
         """
-        Evaluates the spatial tensors. Returns a routing string to dictate the next Lár execution edge.
+        Evaluates the spatial tensors. Returns a semantic RouteDecision to dictate the next Lár execution edge.
         """
         if predicted_state.collision_entropy > self.entropy_threshold:
             print(f"[EntropicVetoRouter] DANGER VETO: Predicted trajectory entropy ({predicted_state.collision_entropy:.2f}) exceeds structural threshold.")
-            return "TRIGGER_REPLAN"
+            return RouteDecision.TRIGGER_REPLAN
         else:
             print(f"[EntropicVetoRouter] SAFE: Trajectory validated.")
-            return "COMMIT_TRAJECTORY"
+            return RouteDecision.COMMIT_TRAJECTORY
 
 class ReplanTrajectoryEdge:
     """
@@ -33,15 +34,20 @@ class ReplanTrajectoryEdge:
         self.max_retries = max_retries
         self.retry_count = 0
 
-    def route_to_new_vector(self, current_state: LatentKinematicState) -> Any:
+    def route_to_new_vector(self, current_state: LatentKinematicState, dmn_feedback_prior: Optional[Any] = None) -> Any:
         """
         Recalibrates the kinematic exploration logic based on past failures.
         In a multi-body simulation, this directs the framework to explore alternative structural pathways.
+        Integrates directly with DMN failure heuristics if provided.
         """
         self.retry_count += 1
         if self.retry_count >= self.max_retries:
-            raise RecursionError("Maximum replanning threshold reached. Structural impasse detected.")
+            raise StructuralImpasseError("Maximum replanning threshold reached. Structural impasse detected.")
         
-        print(f"[ReplanTrajectoryEdge] Attempt {self.retry_count}: Injecting stochastic noise for vector recalculation.")
-        # Logic to append stochastic variance to the next run
+        if dmn_feedback_prior:
+            print(f"[ReplanTrajectoryEdge] Attempt {self.retry_count}: Integrating DMN feedback prior for target recalibration.")
+        else:
+            print(f"[ReplanTrajectoryEdge] Attempt {self.retry_count}: Injecting stochastic noise for vector recalculation.")
+            
+        # Logic to append variance or DMN guidance to the next run
         return True

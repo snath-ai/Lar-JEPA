@@ -1,7 +1,7 @@
 <div align="center">
 
-# Lar-JEPA: Orchestrating World Models (A Post-LLM Architecture)
-**A deterministic execution spine and cognitive memory layer for Predictive Architectures.**
+# Lar-JEPA: The Universal Model Routing Nervous System
+**Route LLMs, JEPAs, and every cognitive architecture that follows — as first-class nodes in the same deterministic graph.**
 
 <p align="center">
   <a href="https://github.com/snath-ai/lar">
@@ -22,16 +22,21 @@ For the past three years, AI research has focused heavily on **Prompt Engineerin
 **This approach is hitting a wall.**
 When an LLM agent hallucinates a poorly reasoned action on step 3 of a 50-step plan, the entire execution is doomed. Why? Because its "memory" is simply a massive, linear string of text appended to a context window. LLMs do not inherently understand physics, spatial logic, or long-term consequence; they predict the most statistically probable next token. 
 
-## The Post-LLM Paradigm (JEPA)
-Yann LeCun’s **Joint Embedding Predictive Architecture (JEPA)** offers a profound paradigm shift. 
-JEPAs (like V-JEPA or I-JEPA) do not predict the next word; they predict the abstract *state of the world*. They learn to ignore irrelevant background noise and focus on the conceptual mechanics of a problem. 
+## The Universal Routing Problem
+Every agentic framework built so far assumes one model type. LangChain assumes LLMs. When a JEPA world model outputs a 768-dimensional latent tensor, those frameworks crash — no signal type for it.
 
-A JEPA allows an agent to imagine different actions and predict the environmental outcomes in a hidden mathematical representation space (latent tensors) *before* committing to a physical action.
+**Lár-JEPA solves this at the architectural level.**
 
-**The Orchestration Problem:**
-How do you route an abstract mathematical space? 
-Current orchestration frameworks are entirely text-dependent. If your state-of-the-art World Model outputs a 768-dimensional tensor symbolizing a "crash," traditional frameworks crash.
-**You need a new Nervous System.**
+Lár routes between `AbstractCognitiveNode` instances without inspecting their internals — LLM, JEPA, diffusion, SSM, GNN, or any architecture that follows. The spine does not care:
+
+- **LLM → JEPA**: LLMNode generates an LGSL routing decision; JEPANode executes the world-model prediction.
+- **JEPA → LLM**: JEPANode writes its latent prediction to GraphState; LLMNode reads it as semantic context.
+- **BatchNode([JEPA × N])**: N JEPAs concurrently with different action vectors — Monte Carlo search in latent space.
+- **BatchNode([LLM, JEPA, GNN])**: Heterogeneous model swarm, aggregated by a ReduceNode.
+- **Any future architecture**: Implement `AbstractCognitiveNode`, declare `ModelType.FUTURE`. Routes without modification.
+
+**You need a Nervous System that routes anything. That is Lár.**
+
 
 ---
 
@@ -111,4 +116,4 @@ The industry is building the Brain (JEPAs). We are building the Nervous System (
 ## License
 **Apache 2.0**.
 
-**Note**: This repository is a **Conceptual Testbed and Showcase** built upon the [Lár Engine](https://github.com/snath-ai/lar). It is intended to demonstrate advanced concepts in Predictive World Models, Mathematical Routing, and Post-LLM orchestration.
+**Note**: This repository implements the `AbstractCognitiveNode` universal routing interface, the `AbstractManifold` JEPA world-model base, the `AbstractContextBridge` cross-modal signal layer, and the `JEPA_DMN_Consolidation_Node` live bridge to the DMN episodic memory store. The Spatial Kinematics Engine provides a domain-specific reference implementation. See `ARCHITECTURE.md` for the full nervous system design.
