@@ -136,6 +136,17 @@ poetry run python examples/advanced/13_world_model_jepa.py
 
 ---
 
+## TensorSafeEncoder & Native Tensor Routing
+
+At the heart of Lár-JEPA's capabilities is the `TensorSafeEncoder` natively implemented within the Lár engine core. 
+
+When a standard agent attempts to log state, it uses standard `json.dumps()`, which immediately crashes if the state contains PyTorch tensors or multidimensional NumPy arrays. The `TensorSafeEncoder` intercepts these structures natively during the graph's execution and audit-logging phases. 
+Instead of crashing or attempting to write gigabytes of floating-point values, it translates the mathematical states into safe, auditable metadata (e.g. `{"__type__": "Tensor", "shape": [1, 768]}`). 
+
+This means you can route gigabyte-sized biological tensors across `AbstractManifold` nodes while retaining cryptographic, EU AI Act-compliant audit traces for every step.
+
+---
+
 ## JEPA ↔ DMN Memory Loop
 
 JEPA simulations are expensive. Running the same latent-space search twice is waste. The `JEPA_DMN_Consolidation_Node` closes the loop:
