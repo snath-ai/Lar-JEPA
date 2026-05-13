@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+lar_logs/
+test_logs/
+memory/
+data/
+*.ckpt
+*.pt
+.env

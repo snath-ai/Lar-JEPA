@@ -11,6 +11,7 @@ from .types import (
     CompositionPattern,
     StructuralImpasseError,
 )
+from .adapter import CognitiveNodeAdapter
 
 __all__ = [
     # Interfaces
@@ -18,6 +19,8 @@ __all__ = [
     "AbstractManifold",
     "AbstractContextBridge",
     "AbstractEntropicRouter",
+    # Adapter
+    "CognitiveNodeAdapter",
     # Types
     "RouteDecision",
     "ModelType",
