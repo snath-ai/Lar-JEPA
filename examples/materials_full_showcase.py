@@ -10,8 +10,11 @@ Primitives used
   FunctionalNode    — pure Python logic (serialize library, pick best candidate)
   BatchNode         — evaluate all 5 crystal candidates IN PARALLEL
   BranchTriageNode  — aggregate parallel results, flag thermal-runaway risk
-  RouterNode        — branch on best-candidate found vs impasse
-  LLMNode           — Claude Haiku interprets the JEPA prediction
+  AdaptiveNode      — if any branch is CRITICAL, LLM designs a focused
+                      re-analysis subgraph at runtime; TopologyValidator
+                      guards against cycles and unapproved tools (Art. 3(23))
+  RouterNode (×2)   — critical vs non-critical; found_candidate vs impasse
+  LLMNode           — materials science interpretation of JEPA result
   ReduceNode        — synthesize JEPA metrics + LLM analysis → recommendation
   HumanJuryNode     — researcher approval gate (EU AI Act Art. 14)
   ToolNode          — write the final lab report to disk
@@ -43,6 +46,7 @@ from lar import (
     RouterNode, LLMNode, ReduceNode,
     HumanJuryNode, ToolNode, ClearErrorNode,
 )
+from lar.adaptive import AdaptiveNode, TopologyValidator
 from core.types import RouteDecision
 
 # ── Materials engine ────────────────────────────────────────────────────────
@@ -503,6 +507,40 @@ def run():
         next_node=router_node,
     )
 
+    # ── AdaptiveNode: runtime subgraph if any branch is CRITICAL ──────────
+    # TopologyValidator restricts the LLM to approved tools only (Art. 3(23))
+    validator = TopologyValidator(
+        allowed_tools=[save_lab_report],
+        max_nodes=4,
+    )
+    adaptive_node = AdaptiveNode(
+        llm_model=_OLLAMA_MODEL,
+        prompt_template=(
+            "You are a materials safety AI reviewing a battery electrolyte screening.\n\n"
+            "Screening summary:\n{screening_summary}\n\n"
+            "One or more candidates were flagged CRITICAL thermal risk.\n"
+            "Design a 1-node analysis subgraph: a single LLMNode that will\n"
+            "write a 2-sentence thermal risk advisory to state key 'risk_advisory'.\n"
+            "The prompt should reference the screening_summary.\n\n"
+            "Output ONLY the JSON spec. No explanation."
+        ),
+        validator=validator,
+        next_node=pick_best_node,   # subgraph exits back to main flow
+        context_keys=["screening_summary"],
+        system_instruction="Output ONLY valid JSON. No markdown, no explanation.",
+        generation_config={"api_base": _OLLAMA_BASE, "max_tokens": 400},
+    )
+
+    # ── CriticalRouter: CRITICAL branches → AdaptiveNode, else → pick_best ─
+    critical_router = RouterNode(
+        decision_function=lambda s: "critical" if s.get("any_critical") else "normal",
+        path_map={
+            "critical": adaptive_node,
+            "normal":   pick_best_node,
+        },
+        default_node=pick_best_node,
+    )
+
     # ── BranchTriageNode: aggregate parallel screening results ─────────────
     branch_keys = [f"candidate_{i}_analysis" for i in range(N_CANDIDATES)]
     triage_node = BranchTriageNode(
@@ -512,7 +550,7 @@ def run():
         critical_threshold="CRITICAL",
         summary_state_key="screening_summary",
         critical_flag_key="any_critical",
-        next_node=pick_best_node,
+        next_node=critical_router,
     )
 
     # ── BatchNode: evaluate all 5 candidates in parallel ──────────────────
@@ -555,15 +593,18 @@ def run():
     print("             ├─ EvalCrystalBranch[3] LLZO")
     print("             └─ EvalCrystalBranch[4] LiPF6")
     print("          └─ BranchTriageNode (aggregate, flag CRITICAL risk)")
-    print("             └─ FunctionalNode (pick best stable candidate)")
-    print("                └─ RouterNode (found_candidate → LLM / impasse → error)")
-    print("                   ├─ LLMNode (Claude Haiku: interpret JEPA result)")
-    print("                   │    └─ ReduceNode (synthesize → final recommendation)")
-    print("                   │         └─ DemoJuryNode (EU Art.14 approval gate)")
-    print("                   │              └─ ToolNode (save lab report)")
-    print("                   │                   └─ DMNWriteNode (Hippocampus write)")
-    print("                   │                        └─ AddValueNode (COMMITTED)")
-    print("                   └─ ClearErrorNode → AddValueNode (IMPASSE)")
+    print("             └─ RouterNode #1 (critical → AdaptiveNode / normal → pick_best)")
+    print("                ├─ AdaptiveNode (LLM designs risk advisory subgraph at runtime)")
+    print("                │    └─ [generated subgraph] → pick_best_candidate")
+    print("                └─ FunctionalNode (pick best stable candidate)")
+    print("                   └─ RouterNode #2 (found_candidate → LLM / impasse → error)")
+    print("                      ├─ LLMNode (interpret JEPA result)")
+    print("                      │    └─ ReduceNode (synthesize → final recommendation)")
+    print("                      │         └─ DemoJuryNode (EU Art.14 approval gate)")
+    print("                      │              └─ ToolNode (save lab report)")
+    print("                      │                   └─ DMNWriteNode (Hippocampus write)")
+    print("                      │                        └─ AddValueNode (COMMITTED)")
+    print("                      └─ ClearErrorNode → AddValueNode (IMPASSE)")
 
     # ════════════════════════════════════════════════════════════════════════
     # Execute
@@ -625,8 +666,9 @@ def run():
         ("FunctionalNode (×2)",         "serialize_library · pick_best_candidate"),
         ("BatchNode",                   "5 parallel crystal evaluations"),
         ("BranchTriageNode",            "Aggregate results, flag CRITICAL"),
-        ("RouterNode",                  "found_candidate vs impasse branch"),
-        ("LLMNode",                     "Claude Haiku: materials interpretation"),
+        ("AdaptiveNode",                "LLM designs risk advisory subgraph at runtime (Art. 3(23))"),
+        ("RouterNode (×2)",             "critical vs normal · found_candidate vs impasse"),
+        ("LLMNode",                     "Materials science interpretation of JEPA result"),
         ("ReduceNode",                  "Synthesize JEPA + LLM → recommendation"),
         ("DemoJuryNode (HumanJuryNode)","EU AI Act Art. 14 researcher gate"),
         ("ToolNode",                    "Save lab report to disk"),
