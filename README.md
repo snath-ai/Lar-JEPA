@@ -129,7 +129,7 @@ poetry run python examples/advanced/13_world_model_jepa.py
 |:---|:---|:---|
 | **Tensor routing** | Crashes — no signal type | Native. `GraphState` passes tensors transparently. |
 | **Mathematical routing logic** | LLM call to decide next step | Deterministic Python `RouterNode` — `if collision_prob > 0.85: return "REPLAN"` |
-| **Tensor audit logging** | Not supported | `TensorSafeEncoder` serialises tensors to metadata: `{"__type__": "Tensor", "shape": [1, 768]}` |
+| **Tensor audit logging** | Not supported | `TensorSafeEncoder` (now fully implemented in Lár v2.1.0 engine core) safely serialises tensors to metadata: `{"__type__": "Tensor", "shape": [1, 768]}` |
 | **Heterogeneous model swarm** | Single model type assumed | `BatchNode([LLM, JEPA, GNN])` — aggregated by `ReduceNode` |
 | **Safety rollback** | Hope the LLM doesn't hallucinate | `RouterNode` vetoes bad predicted states before execution |
 | **Long-term learning** | None | DMN sleep cycle consolidates JEPA simulations into persistent heuristics |
