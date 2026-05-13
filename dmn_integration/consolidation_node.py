@@ -44,13 +44,19 @@ import datetime
 from typing import Any, Dict, List, Optional
 
 # ---------------------------------------------------------------------------
-# DMN Hippocampus import — path relative to DMN/lar inside this repo
+# DMN Hippocampus import — tries canonical DMN first, then embedded fallback
 # ---------------------------------------------------------------------------
-_DMN_SRC = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "DMN", "lar", "src")
-)
-if _DMN_SRC not in sys.path:
-    sys.path.insert(0, _DMN_SRC)
+_HERE = os.path.dirname(__file__)
+_REPO_ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
+
+# Priority 1: canonical DMN repo (Lar_Main/DMN/lar/src) — always most current
+_CANONICAL_DMN_SRC = os.path.join(_REPO_ROOT, "DMN", "lar", "src")
+# Priority 2: embedded copy inside lar_jepa (updated on sync)
+_EMBEDDED_DMN_SRC = os.path.abspath(os.path.join(_HERE, "..", "DMN", "lar", "src"))
+
+for _path in [_CANONICAL_DMN_SRC, _EMBEDDED_DMN_SRC]:
+    if os.path.isdir(_path) and _path not in sys.path:
+        sys.path.insert(0, _path)
 
 try:
     from brain.hippocampus import Hippocampus

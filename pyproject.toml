@@ -10,7 +10,7 @@ keywords = ["JEPA", "Cognitive Architecture", "Spatial Forensics", "Deterministi
 
 [tool.poetry.dependencies]
 python = "^3.11"
-lar = "^0.6.0"
+lar-engine = "^2.1.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

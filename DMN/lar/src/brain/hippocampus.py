@@ -17,6 +17,9 @@ CHROMA_DB_DIR = os.path.join(PROJECT_ROOT, "data", "chroma_db")
 # Ollama Config
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
+# Use a dedicated env var for embeddings so swapping the cognitive model
+# (e.g. to qwen2.5) doesn't cause ChromaDB dimension mismatches.
+EMBED_MODEL = os.environ.get("OLLAMA_EMBED_MODEL", "llama3.2")
 
 class Hippocampus:
     """
@@ -44,10 +47,46 @@ class Hippocampus:
         print(f"🧠 [Hippocampus] Connecting to ChromaDB at {self.chroma_path}...")
         try:
             self.chroma_client = chromadb.PersistentClient(path=self.chroma_path)
+            # Cold Memory
             self.collection = self.chroma_client.get_or_create_collection(name="long_term_memory")
+            # Warm Memory 
+            self.warm_collection = self.chroma_client.get_or_create_collection(name="warm_memory")
         except Exception as e:
             print(f"❌ [Hippocampus] ChromaDB Init Error: {e}")
             self.collection = None
+            self.warm_collection = None
+
+    def save_warm_memory(self, text: str, embedding: List[float], metadata: dict = None):
+        """
+        Saves compressed semantic summaries to the Warm Memory collection.
+        Enforces a 500-entry limit dynamically.
+        """
+        if not text or not self.warm_collection: return
+        
+        memory_id = str(uuid.uuid4())
+        metadata = metadata or {}
+        
+        try:
+            self.warm_collection.add(
+                documents=[text],
+                embeddings=[embedding],
+                metadatas=[metadata],
+                ids=[memory_id]
+            )
+            print(f"🔥 [Hippocampus] Warm memory consolidated (ID: {memory_id})")
+            
+            # Enforce 500 entry limit
+            count = self.warm_collection.count()
+            if count > 500:
+                # Prune oldest
+                all_ids = self.warm_collection.get()["ids"]
+                # Assuming simple chronological sorting by age (we should ideally sort by timestamp metadata, but for speed, we pop the first ID returned which in Chroma is roughly insertion order)
+                if all_ids:
+                    self.warm_collection.delete(ids=[all_ids[0]])
+                    print(f"🧹 [Hippocampus] Pruned oldest warm memory to maintain 500 limit.")
+                    
+        except Exception as e:
+            print(f"❌ [Hippocampus] Warm Memory Save Error: {e}")
 
     def save_memory(self, text: str, embedding: List[float], metadata: dict = None):
         """
@@ -116,43 +155,23 @@ class Hippocampus:
         except:
             return ""
 
-    def recall(self, query: str = None, max_memories: int = 3) -> str:
-        """
-        Retrieves context from long-term memory via ChromaDB.
-        """
-        if not query:
-            # Fallback to recency if no query (get last N from JSON)
-            return self.get_latest_dream()
-
-        if not self.collection:
-            return ""
-
-        try:
-            # query_embeddings expects a list of embeddings. 
-            # We need to generate embedding for the query first provided by caller? 
-            # OR typically we generate it here?
-            # Wait, Hippocampus previously relied on self._get_embedding.
-            # DMN provides embeddings on save. But Recall needs to generate them too.
-            # I removed _get_embedding helper. I should put it back or move it to a Util.
-            # Ideally Hippocampus should own embedding generation.
-            pass 
-            # REVISION: I will re-add _get_embedding method below to support recall.
-        except:
-             pass
-        return "" # Placeholder, logic continues below...
-
-    # Helper re-added for Recall
-    def _generate_embedding(self, text):
+    def _generate_embedding(self, text: str) -> List[float]:
         import requests
         url = f"{OLLAMA_HOST}/api/embeddings"
         try:
-            res = requests.post(url, json={"model": DEFAULT_MODEL, "prompt": text})
-            if res.status_code == 200:
-                return res.json().get("embedding")
-        except: pass
-        return None
+            # We use EMBED_MODEL (configurable via OLLAMA_EMBED_MODEL) to prevent dimension mismatches
+            # in ChromaDB if the user swaps the cognitive model to Qwen or GPT-4.
+            res = requests.post(url, json={"model": EMBED_MODEL, "prompt": text})
+            res.raise_for_status()
+            return res.json().get("embedding")
+        except Exception as e:
+            print(f"❌ [Hippocampus] Embedding Generation Error: {e}")
+            return None
 
-    def recall(self, query: str = None, max_memories: int = 3) -> str:
+    def recall(self, query: str = None, max_memories: int = 10) -> str:
+        """
+        Retrieves context from Cold Memory via ChromaDB.
+        """
         if not query:
              return self.get_latest_dream()
 
@@ -171,10 +190,34 @@ class Hippocampus:
                 # Chroma returns {'documents': [[doc1, doc2]], 'ids': ...}
                 docs = results.get('documents', [[]])[0]
                 if docs:
-                    return "\\n".join([f"- {d}" for d in docs])
+                    return "\n".join([f"- {d}" for d in docs])
             except Exception as e:
                 print(f"⚠️ [Hippocampus] Recall Error: {e}")
         
+        return ""
+
+    def recall_warm(self, query: str = None, max_memories: int = 3) -> str:
+        """
+        Retrieves context from Warm Memory via ChromaDB.
+        """
+        if not query or not self.warm_collection:
+             return ""
+
+        try:
+            query_vec = self._generate_embedding(query)
+            if not query_vec: return ""
+            
+            results = self.warm_collection.query(
+                query_embeddings=[query_vec],
+                n_results=max_memories
+            )
+            
+            docs = results.get('documents', [[]])[0]
+            if docs:
+                return "\n".join([f"- {d}" for d in docs])
+        except Exception as e:
+            print(f"⚠️ [Hippocampus] Warm Recall Error: {e}")
+            
         return ""
 
     # Legacy helper for reading old JSONs if needed
@@ -184,7 +227,7 @@ class Hippocampus:
         for d in dreams:
             if "insights" in d and "narrative" in d["insights"]:
                  text.append(d["insights"]["narrative"])
-        return "\\n".join(text)
+        return "\n".join(text)
 
 # Minimal test
 if __name__ == "__main__":

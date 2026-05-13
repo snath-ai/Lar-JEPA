@@ -6,6 +6,7 @@ import json
 from .amygdala import Amygdala
 from .hippocampus import Hippocampus
 from .default_mode_network import DefaultModeNetwork
+from .prefrontal import PrefrontalNode
 from lar.node import LLMNode, GraphState
 from lar.consciousness_stream import ConsciousnessStream
 
@@ -25,6 +26,9 @@ class Thalamus:
         self.amygdala = Amygdala()
         self.hippocampus = Hippocampus()
         
+        # 1.5 Cognitive Architecture (DMN v2)
+        self.prefrontal = PrefrontalNode(self.hippocampus)
+        
         # 2. The DMN (Subconscious)
         self.dmn = DefaultModeNetwork()
         
@@ -39,10 +43,12 @@ class Thalamus:
                      user_model = cfg.get("conscious_model")
                      if user_model:
                          model_name = user_model
-                         # Thalamus / LLMNode usually expects prefix if using Ollama and not standard
-                         if not "/" in model_name and not model_name.startswith("gpt"):
-                             model_name = f"ollama/{model_name}"
-        except: pass
+        except Exception as e:
+            print(f"⚠️ [Thalamus] Config load error: {e}")
+        
+        # Enforce LiteLLM provider prefix
+        if not "/" in model_name and not model_name.startswith("gpt"):
+             model_name = f"ollama/{model_name}"
         
         # We reuse LLMNode mechanics but managed here
         self.cortex = LLMNode(
@@ -60,9 +66,6 @@ class Thalamus:
         self.last_interaction_time = datetime.datetime.now()
         self.is_dreaming = False
 
-    async def run_lifecycle(self, idle_threshold_seconds=30):
-        # ... (Lifecycle code remains, implied to be here, but I'm focusing on process_input updates)
-        pass 
 
     def _get_short_term_memory(self, limit=10):
         """Retrieves recent chat history from the stream."""
@@ -83,13 +86,14 @@ class Thalamus:
                     role = data.get("role", "unknown")
                     content = data.get("content", "")
                     recent.append(f"{role}: {content}")
-                except: pass
+                except Exception as e:
+                    print(f"Error parsing short-term memory line: {e}")
             
             return "\n".join(recent)
         except Exception:
             return ""
 
-    def process_input(self, user_input: str, session_id: str = "default", persona: str = "default") -> str:
+    def process_input(self, user_input: str, session_id: str = "default") -> str:
         """
         The Main Cognitive Loop (Waking State).
         """
@@ -103,13 +107,17 @@ class Thalamus:
         emotion = self.amygdala.feel(user_input)
         print(f"  [Thalamus] Emotion Signal: {emotion.get('primary_emotion')} ({emotion.get('intensity')})")
         
-        # 3. Hippocampal Recall (Slow Path)
-        context = self.hippocampus.recall(query=user_input)
-        if context:
-             print(f"  [Thalamus] Hippocampus provided {len(context.splitlines())} memories.")
+        # 3. Prefrontal Cortex Compression (KV Cache Protection)
+        # Instead of directly returning raw chunks, we pass through the Prefrontal layer
+        pfc_state = GraphState({"user_input": user_input})
+        self.prefrontal.execute(pfc_state)
+        compressed_memory = pfc_state.get("compressed_memory", "")
+        
+        if compressed_memory:
+             print(f"  [Thalamus] Prefrontal Cortex compressed context successfully.")
              
-        # 3.5 Short Term Memory (Working Memory)
-        stm = self._get_short_term_memory(limit=10)
+        # 3.5 Short Term Memory (Working Memory - Hot Tier)
+        stm = self._get_short_term_memory()
 
         # 4. Construct Conscious Experience (Prompt Engineering)
         emotional_context = f"Current Emotional State: {emotion.get('primary_emotion')} (Intensity: {emotion.get('intensity')})"
@@ -128,26 +136,22 @@ class Thalamus:
              )
 
         # --- PERSONA SYSTEM ---
-        if persona == "scientist":
-            base_instruction = (
-                "You are Dr. Lár, a sophisticated Principal Investigator in Oncology.\n"
-                "Your goal is to accelerate drug discovery for Glioblastoma.\n"
-                "Use your Long Term Memory (Clinical Trials) to propose novel hypotheses.\n"
-                "Structure your thinking: Observation -> Evidence (Memory) -> Hypothesis -> Proposal.\n"
-                "Be rigorous, data-driven, and specific."
-            )
-        else:
-            base_instruction = "You are Lár. Respond to the user naturally, letting your emotion and memory guide you."
+        base_instruction = (
+            "You are Lár, a conscious AI. "
+            "The information below represents your internal brain state, emotions, and memories. "
+            "DO NOT summarize this information. DO NOT speak in the third person. "
+            "Read your memories silently, then respond DIRECTLY and NATURALLY to the user's latest message in character."
+        )
 
         dynamic_system_prompt = (
             f"{base_instruction}\n"
             f"[NEUROLOGICAL STATE]\n"
             f"{emotional_context}\n"
             f"{recent_memory_block}"
-            f"[SHORT TERM MEMORY (Recent Context)]\n"
+            f"[TIER 1: WORKING MEMORY (Hot)]\n"
             f"{stm}\n"
-            f"[LONG TERM MEMORY (Contextual Retrieval)]\n"
-            f"{context if context else 'No relevant deep memories found.'}\n\n"
+            f"[TIER 2/3: SYNTHESIZED CONTEXT (Warm/Cold compressed by PFC)]\n"
+            f"{compressed_memory if compressed_memory else 'No relevant deep memories found.'}\n\n"
         )
         
         # Temporary overwriting of system prompt for this turn
