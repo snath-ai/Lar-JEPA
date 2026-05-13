@@ -178,14 +178,20 @@ class JEPA_DMN_Consolidation_Node:
             f"Entropic loss: {entropy:.4f} | Action: {action_repr}"
         )
 
-        metadata = {
+        raw_meta = {
             "source":        "jepa_consolidation_node",
             "domain":        domain,
             "outcome":       outcome,
             "entropic_loss": entropy,
-            "memory_type":   "episodic",          # DMN v3.0 memory typing
+            "memory_type":   "episodic",
             "timestamp":     datetime.datetime.utcnow().isoformat(),
             **trajectory_log.get("metadata", {}),
+        }
+        # ChromaDB requires all metadata values to be str/int/float/bool.
+        # Serialize any list or dict values to JSON strings.
+        metadata = {
+            k: json.dumps(v) if isinstance(v, (list, dict)) else v
+            for k, v in raw_meta.items()
         }
 
         try:

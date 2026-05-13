@@ -101,6 +101,56 @@ SCENARIO: Orbital insertion — second attempt (warm context)
 
 Cycle 2 recalls Cycle 1's committed trajectory. The JEPA doesn't re-explore the same latent region. The AuditLogger writes a HMAC-signed trace at each step.
 
+### Materials-JEPA: Real Trained JEPA on CPU (new)
+
+A complete battery materials discovery pipeline trained and run entirely locally — no GPU, no cloud APIs.
+
+**Step 1 — Train CrystalJEPA from scratch (61 seconds on MacBook CPU):**
+
+```bash
+cd lar_jepa
+python examples/train_crystal_jepa.py
+```
+
+```
+  CrystalJEPA Training — Joint Embedding Predictive Architecture
+  embed_dim: 64  |  samples: 4,000  |  epochs: 80  |  device: cpu
+
+  Epoch   1/80  loss=1.11731
+  Epoch  80/80  loss=0.03342   (97.0% reduction in 60.8s)
+
+  Saved → models/crystal_jepa_encoder.pt
+```
+
+**Step 2 — Run the full pipeline with trained weights:**
+
+```bash
+python examples/run_trained_demo.py
+```
+
+```
+  ✅ [JEPA→DMN] Hippocampus connection established.
+  [DMN Recall] 'Li6PS5Cl (Argyrodite)': (2 prior heuristics recalled)
+  [ThermalStabilityRouter] COMMIT: thermal_entropy=0.208 — stable.
+  [DMN Write] Heuristic committed: True
+
+  Outcome  : stable_electrolyte_committed
+  Candidate: Li6PS5Cl (Argyrodite)
+  JEPA     : trained, 97% loss reduction
+  Wall time: 520 ms
+```
+
+The trained JEPA produces genuinely differentiated representations — thermal entropies 0.17–0.27 vs the untrained encoder's uniform ~0.5. See [`DEMO_OUTPUT.md`](DEMO_OUTPUT.md) for the full captured output.
+
+**Step 3 — Full showcase: all 12 Lár primitives + DMN (requires Ollama):**
+
+```bash
+ollama pull llama3.2
+python examples/materials_full_showcase.py
+```
+
+Uses every Lár primitive in one graph: `FunctionalNode`, `BatchNode` (5 parallel branches), `BranchTriageNode`, `ReduceNode`, `LLMNode`, `HumanJuryNode`, `ToolNode`, `RouterNode`, `ClearErrorNode`, `AddValueNode`, `AdaptiveNode` — plus DMN recall and write at either end.
+
 ### Single-node wall avoidance (original PoC)
 
 ```bash
@@ -191,6 +241,12 @@ Runs without cloud APIs. Set `OLLAMA_HOST` for real vector embeddings; the bridg
 **`AbstractContextBridge`** — Stateless signal adapters for cross-modal composition. Allows LLMs to attend to JEPA latent predictions and JEPAs to condition on LLM semantic embeddings — without either node knowing about the other's internals.
 
 **`JEPA_DMN_Consolidation_Node`** — Live bridge writing committed JEPA trajectories into the DMN episodic memory store (ChromaDB). Expensive JEPA simulations become cheap long-term heuristics during sleep consolidation.
+
+**`CrystalJEPA`** — A real JEPA model for battery materials. Three-component architecture: `CrystalSiteEncoder` (2-layer Transformer over 20 elemental sites), EMA `TargetEncoder` (no gradients), and a `Predictor` that maps visible-site context to masked-site representations. Trained with JEPA loss — MSE in latent space with stop-gradient on the target. 68,736 parameters. Trains to 97% loss reduction in 61 seconds on CPU. Interchangeable with any `AbstractManifold` implementation — GNN, physics-informed net, or simulation engine.
+
+**`ElectrochemicalJEPA`** — Encoder for electrochemical impedance data (capacity retention, cycle count, temperature). Designed for real EIS datasets (MPContribs, NREL ECDH) — currently trained on synthetic data as a structural placeholder.
+
+**`CycleStabilityHead`** — Cross-attention head that attends from electrochemical embeddings to site embeddings to predict cycle stability probability. Needs real electrochemical labels to train; architecture is production-ready.
 
 **`Spatial Kinematics Engine`** — Reference implementation in `spatial_kinematics_engine/`. N-body spatial modeling: coordinate interactions, trajectory dependencies, collision heuristics for non-linear multi-body meshes. Domain-agnostic — the same engine applies to robotic kinematics, molecular dynamics, or orbital mechanics.
 
