@@ -147,6 +147,18 @@ This means you can route gigabyte-sized biological tensors across `AbstractManif
 
 ---
 
+## EU AI Act Compliance
+
+Lár-JEPA is architecturally structured to satisfy the requirements of the European Union AI Act for high-risk systems. It implements core primitives for:
+* **Article 12 (Record-Keeping):** HMAC-SHA256 cryptographically signed tensor audit logs.
+* **Article 13 (Transparency):** Deterministic, glass-box graph execution logic.
+* **Article 14 (Human Oversight):** Pausable `GraphState` transitions allowing manual override.
+* **Article 15 (Robustness):** Entropic routing to prevent hallucinated loops.
+
+See [EU_AI_ACT_COMPLIANCE.md](EU_AI_ACT_COMPLIANCE.md) for full details.
+
+---
+
 ## JEPA ↔ DMN Memory Loop
 
 JEPA simulations are expensive. Running the same latent-space search twice is waste. The `JEPA_DMN_Consolidation_Node` closes the loop:
