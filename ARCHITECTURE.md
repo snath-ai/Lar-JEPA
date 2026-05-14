@@ -184,6 +184,35 @@ This is the Lár-JEPA BrainNode as described in the DMN v3.0 preprint
 planning; the LLM generates the explicit LGSL routing instruction. Trained
 and deployed separately; composed at inference time via GraphState.
 
+### Pattern 7: Complete Enterprise Scientific Pipeline (Materials-JEPA)
+```
+                     RecallNode (DMN Hippocampus Prior Knowledge)
+                                │
+                          ElectrochemNode
+                                │
+          BatchNode([EvalBranch₁, EvalBranch₂, EvalBranch₃, ...])
+          (Parallel continuous-space structural predictions)
+                                │
+                         BranchTriageNode
+                                │
+          RouterNode(CRITICAL risk?) ──► AdaptiveNode (Dynamic LLM Subgraph)
+                                │
+                          FunctionalNode (Select Best)
+                                │
+                         RouterNode (Impasse?)
+                                │
+                  LLMNode (Materials Interpretation)
+                                │
+             ReduceNode (Synthesis & Recommendation)
+                                │
+                 HumanJuryNode (EU AI Act Gate)
+                                │
+                      ToolNode (Save Report)
+                                │
+               DMNWriteNode (Hippocampus Consolidation)
+```
+This pattern, implemented in `examples/materials_full_showcase.py`, demonstrates the absolute ceiling of the framework. It proves that real continuous-world prediction models (like the **Crystal JEPA**, trained natively with latent-space EMA target networks and masking mechanisms) can be seamlessly embedded into complex, legally compliant enterprise execution graphs alongside large language models.
+
 ---
 
 ## BatchNode Concurrency

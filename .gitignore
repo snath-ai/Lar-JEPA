@@ -10,3 +10,7 @@ data/
 *.ckpt
 *.pt
 .env
+seismic_logs/
+infrastructure_logs/
+lab_reports/
+DMN/lar/memory/dreams.json
