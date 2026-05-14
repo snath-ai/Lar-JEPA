@@ -528,7 +528,7 @@ def main():
 
     # Build graph
     entry_node = build_seismic_graph()
-    executor   = GraphExecutor(log_dir="seismic_logs")
+    executor   = GraphExecutor(log_dir="seismic_logs", hmac_secret="snath_ai_seismic_eu_compliance_2026")
 
     # Run all seismic events through the graph
     all_reports = []

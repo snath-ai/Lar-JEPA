@@ -522,7 +522,7 @@ def main():
     print(f"  topo_data shape    : {list(topo_data.shape)}   (1 × nodes × features)")
 
     entry_node = build_infrastructure_graph()
-    executor   = GraphExecutor(log_dir="infrastructure_logs")
+    executor   = GraphExecutor(log_dir="infrastructure_logs", hmac_secret="snath_ai_infrastructure_eu_compliance_2026")
 
     all_reports = []
     for snapshot_idx in range(load_data.shape[0]):
