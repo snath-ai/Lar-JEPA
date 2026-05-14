@@ -330,6 +330,234 @@ class AbstractContextBridge(ABC):
 
 # ---------------------------------------------------------------------------
 
+class AbstractLatentFaultLocator(ABC):
+    """
+    Formal specification of the Topological Vulnerability Targeting Engine.
+
+    This abstract base class defines the mathematical principle — not a specific
+    implementation — that constitutes the pre-existing prior art claimed in
+    Exhibit A of the Lár-JEPA IP disclosure (Section 3, Cryptographic Hash:
+    616b53b5350cab38c634e0414b35512f2381ee7da3f32a6a1a2ae4f3b1d299d4).
+
+    Mathematical Specification
+    --------------------------
+    LatentFaultLocator(x_E, x_S, k) → (risk_score, coordinates)
+
+    Given:
+        x_E ∈ ℝ^(B × N_E × d_E)  —  environmental state observations
+                                       (B: batch, N_E: sensor/probe count,
+                                        d_E: per-sensor feature dimension)
+        x_S ∈ ℝ^(1 × N_S × d_S)  —  structural sequence
+                                       (N_S: structural position count,
+                                        d_S: per-position feature dimension)
+        k   ∈ ℤ₊                  —  number of fault coordinates to extract
+
+    Algorithm (the invariant — survives any implementation change):
+        1. Z_E = Encoder_E(x_E)  ∈ ℝ^(B × D)        environmental latent,
+                                                       mean-pooled → Query
+        2. Z_S = Encoder_S(x_S)  ∈ ℝ^(1 × N_S × D)  structural latent,
+                                                       positional → Key, Value
+        3. Q   = W_Q(Z_E)        ∈ ℝ^(B × 1 × D)
+        4. K   = W_K(Z_S)        ∈ ℝ^(B × N_S × D)  (broadcast across batch)
+        5. V   = W_V(Z_S)        ∈ ℝ^(B × N_S × D)
+        6. α   = softmax(Q Kᵀ / √D)  ∈ ℝ^(B × 1 × N_S)   attention weights
+        7. ctx = α V              ∈ ℝ^(B × D)
+        8. s   = σ(W_out(ctx))   ∈ [0, 1]            risk score
+        9. C   = topk(α, k)                           structural fault coordinates
+                                                       (indices into x_S)
+
+    Invariant properties verified by the behavioral test suite
+    (lar_jepa/tests/test_latent_fault_locator_invariants.py):
+        I1. encode_environmental_state(x_E).shape == (B, D)          [pooled Query]
+        I2. encode_structural_sequence(x_S).shape == (1, N_S, D)     [positional K/V]
+        I3. α.sum(dim=-1) ≈ 1.0                                       [valid distribution]
+        I4. s ∈ [0.0, 1.0]                                            [valid probability]
+        I5. C ⊆ {0, 1, …, N_S − 1}                                   [valid coordinates]
+        I6. len(C) == k                                                [correct count]
+
+    Domain Isomorphism
+    ------------------
+    Any tuple (x_E, x_S) in which x_E represents continuous observations of an
+    environmental or system state and x_S represents discrete positions in a
+    structural topology is a valid instantiation of this specification.
+
+    Proven reference implementations (all pre-employment, all published open-source
+    in this repository under Apache 2.0):
+
+        Materials domain:
+            x_E = electrochemical operating conditions (B × N_stations × 12)
+            x_S = crystal lattice elemental sites      (1 × N_sites × 6)
+            C   = topk crystal positions driving instability
+            See: examples/materials_jepa_showcase.py, CycleStabilityHead
+
+        Seismic domain:
+            x_E = crustal stress field readings        (B × N_stations × 6)
+            x_S = geological fault segment topology    (1 × N_segments × 6)
+            C   = topk fault coordinates at highest seismic risk
+            See: examples/seismic_jepa_showcase.py, TectonicRiskHead
+
+        Infrastructure domain:
+            x_E = network traffic load telemetry       (B × N_probes × 6)
+            x_S = server / router graph topology       (1 × N_nodes × 6)
+            C   = topk critical network failure nodes
+            See: examples/infrastructure_jepa_showcase.py, CriticalNodeHead
+
+    Legal significance
+    ------------------
+    This ABC is the architectural prior art. Any future implementation of the
+    Latent Fault Locator — regardless of which specific encoders, attention
+    mechanism variants, or prediction head architectures are used — that satisfies
+    invariants I1–I6 and extends this class is legally classified as a Derivative
+    Work of this pre-employment specification under the Derivative Works Doctrine
+    (Irish Copyright and Related Rights Act 2000, s. 23; Swiss CO Art. 332).
+
+    Compliance with invariants I1–I6 is mechanically verifiable by running:
+        pytest lar_jepa/tests/test_latent_fault_locator_invariants.py
+
+    The invariant test suite is itself prior art, published in this repository
+    pre-employment. An implementation that passes all six invariants against any
+    domain-specific (x_E, x_S) pair is provably a derivative of this specification,
+    regardless of internal implementation detail.
+
+    Authorship and prior art timestamp
+    -----------------------------------
+    Specified by: Aadithya Vishnu Sajeev
+    First published: May 2026, prior to employment commencement.
+    Repository: github.com/snath-ai/Lar-JEPA (Apache 2.0)
+    Anchored by genesis hash: 616b53b5350cab38c634e0414b35512f2381ee7da3f32a6a1a2ae4f3b1d299d4
+    (RFC 3161 certified by FreeTSA.org, March 31, 2026 at 20:37:10 UTC)
+    """
+
+    @abstractmethod
+    def encode_environmental_state(self, x_E: Any) -> Any:
+        """
+        Encode the environmental state observations into a pooled latent vector.
+
+        This is Encoder_E in the specification. The output MUST be mean-pooled
+        (or otherwise aggregated) to a single vector per batch element — it
+        serves as the Query in the cross-attention step. The specific encoder
+        architecture (MLP, Transformer, CNN, SSM, GNN, or any future architecture)
+        is not constrained by this specification. Only the output contract is:
+
+            output.shape == (B, D)
+
+        where B is the batch size and D is the shared embedding dimension.
+
+        Invariant I1: encode_environmental_state(x_E).shape[-1] == D
+                      encode_environmental_state(x_E).ndim == 2
+
+        Parameters
+        ----------
+        x_E : Any
+            Environmental state observations. Shape: (B, N_E, d_E) or equivalent.
+            Domain examples:
+              Materials  — electrochemical operating condition measurements
+              Seismic    — per-station crustal stress field readings
+              Network    — per-probe network traffic telemetry vectors
+              [Future]   — any continuous environmental monitoring signal
+
+        Returns
+        -------
+        Any
+            Pooled latent embedding Z_E ∈ ℝ^(B × D). The Query.
+        """
+        pass
+
+    @abstractmethod
+    def encode_structural_sequence(self, x_S: Any) -> Any:
+        """
+        Encode the structural topology into a positional latent sequence.
+
+        This is Encoder_S in the specification. The output MUST preserve
+        positional structure — it is NOT pooled. It serves as both the Key
+        and Value in the cross-attention step. The specific encoder architecture
+        is not constrained. Only the output contract is:
+
+            output.shape == (1, N_S, D)
+
+        where N_S is the number of structural positions and D is the shared
+        embedding dimension.
+
+        Invariant I2: encode_structural_sequence(x_S).shape == (1, N_S, D)
+                      encode_structural_sequence(x_S).ndim == 3
+
+        Parameters
+        ----------
+        x_S : Any
+            Structural topology data. Shape: (1, N_S, d_S) or equivalent.
+            Domain examples:
+              Materials  — crystal lattice elemental site parameters
+              Seismic    — geological fault segment geometry/kinematics
+              Network    — server/router node centrality and load parameters
+              [Future]   — any discrete structural topology positions
+
+        Returns
+        -------
+        Any
+            Positional latent sequence Z_S ∈ ℝ^(1 × N_S × D). The Keys and Values.
+        """
+        pass
+
+    @abstractmethod
+    def localize_fault_coordinates(
+        self,
+        z_environmental: Any,
+        z_structural: Any,
+        k: int = 3,
+    ) -> tuple:
+        """
+        Apply cross-attention to project the environmental state against the
+        structural sequence and extract the topk fault coordinates.
+
+        This is steps 3–9 of the specification. The cross-attention operator
+        may be implemented using any valid attention mechanism — scaled dot-
+        product, multi-head attention, linear attention, or any future variant —
+        as long as invariants I3–I6 are satisfied:
+
+            I3. attention weights α sum to approximately 1.0 per batch element
+            I4. risk_score s ∈ [0.0, 1.0]
+            I5. returned coordinate indices ⊆ {0, 1, …, N_S − 1}
+            I6. len(coordinates) == k
+
+        Parameters
+        ----------
+        z_environmental : Any
+            Pooled environmental latent Z_E ∈ ℝ^(B × D). The Query.
+        z_structural : Any
+            Positional structural latent Z_S ∈ ℝ^(1 × N_S × D). The Key/Value.
+        k : int
+            Number of fault coordinates to extract.
+
+        Returns
+        -------
+        tuple
+            (risk_score, fault_coordinates, attention_weights)
+            risk_score        : float or tensor in [0, 1]
+            fault_coordinates : sequence of k integer indices into x_S
+            attention_weights : attention distribution over structural positions
+        """
+        pass
+
+    # -- Convenience composite method ---------------------------------------
+
+    def locate(self, x_E: Any, x_S: Any, k: int = 3) -> tuple:
+        """
+        Full pipeline: encode both inputs, apply cross-attention, return results.
+
+        This method provides the complete LatentFaultLocator(x_E, x_S, k)
+        computation. Subclasses may override for efficiency but must preserve
+        the invariants I1–I6.
+
+        Returns
+        -------
+        tuple
+            (risk_score, fault_coordinates, attention_weights)
+        """
+        z_E = self.encode_environmental_state(x_E)
+        z_S = self.encode_structural_sequence(x_S)
+        return self.localize_fault_coordinates(z_E, z_S, k=k)
+
+
 class AbstractEntropicRouter(ABC):
     """
     The Lár deterministic replanning spine for JEPA world model outputs.
