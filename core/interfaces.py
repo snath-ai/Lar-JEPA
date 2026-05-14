@@ -367,7 +367,7 @@ class AbstractLatentFaultLocator(ABC):
                                                        (indices into x_S)
 
     Invariant properties verified by the behavioral test suite
-    (lar_jepa/tests/test_latent_fault_locator_invariants.py):
+    (lar_jepa/tests/unit/test_latent_fault_locator_invariants.py):
         I1. encode_environmental_state(x_E).shape == (B, D)          [pooled Query]
         I2. encode_structural_sequence(x_S).shape == (1, N_S, D)     [positional K/V]
         I3. α.sum(dim=-1) ≈ 1.0                                       [valid distribution]
@@ -412,7 +412,7 @@ class AbstractLatentFaultLocator(ABC):
     (Irish Copyright and Related Rights Act 2000, s. 23; Swiss CO Art. 332).
 
     Compliance with invariants I1–I6 is mechanically verifiable by running:
-        pytest lar_jepa/tests/test_latent_fault_locator_invariants.py
+        pytest lar_jepa/tests/unit/test_latent_fault_locator_invariants.py
 
     The invariant test suite is itself prior art, published in this repository
     pre-employment. An implementation that passes all six invariants against any
