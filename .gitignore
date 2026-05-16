@@ -13,4 +13,5 @@ data/
 seismic_logs/
 infrastructure_logs/
 lab_reports/
+cache/
 DMN/lar/memory/dreams.json
