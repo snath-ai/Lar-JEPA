@@ -30,7 +30,7 @@ class Thalamus:
         self.prefrontal = PrefrontalNode(self.hippocampus)
         
         # 2. The DMN (Subconscious)
-        self.dmn = DefaultModeNetwork()
+        self.dmn = DefaultModeNetwork(hippocampus=self.hippocampus)
         
         # 3. The Neocortex (Executive)
         # Load Model Config
@@ -72,7 +72,7 @@ class Thalamus:
         try:
             # We rely on the stream's log file or internal buffer if we had one
             # Ideally stream class should expose this. For now, read file directly.
-            log_path = self.stream.log_file
+            log_path = self.stream.log_path
             if not os.path.exists(log_path): return ""
             
             with open(log_path, "r") as f:
@@ -162,7 +162,9 @@ class Thalamus:
         state = GraphState({"user_input": user_input})
         self.cortex.execute(state)
         response = state.get("response")
-        
+        if response is None:
+            response = "⚠️ [Lár] Cortex is unreachable. Check that Ollama is running."
+
         # Restore prompt
         self.cortex.system_instruction = original_prompt
         

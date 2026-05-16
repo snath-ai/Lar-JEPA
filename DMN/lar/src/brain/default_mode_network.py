@@ -6,7 +6,7 @@ import time
 import uuid
 # Add Hippocampus import
 try:
-    from brain.hippocampus import Hippocampus
+    from .hippocampus import Hippocampus
 except ImportError:
     Hippocampus = None
 
@@ -26,10 +26,10 @@ class DefaultModeNetwork:
     (Dreams and Vectors).
     """
 
-    def __init__(self, logs_path=None, memory_dir=None):
+    def __init__(self, logs_path=None, memory_dir=None, hippocampus=None):
         # Allow override or use env vars, fallback to defaults
         self.logs_path = logs_path or os.environ.get("LOG_FILE", "logs/interaction_stream.jsonl")
-        
+
         # Determine memory files relative to MEMORY_FILE or default
         env_memory = os.environ.get("MEMORY_FILE")
         if env_memory:
@@ -42,9 +42,13 @@ class DefaultModeNetwork:
              self.vectors_path = os.path.join(base_dir, "dream_vectors.json")
 
         self.max_log_entries = 50
-        
-        # Initialize Unified Brain
-        if Hippocampus:
+
+        # Prefer the caller's shared Hippocampus instance so all brain regions
+        # write and read from the same ChromaDB collection. Fall back to creating
+        # a private instance only when running the DMN standalone (e.g. dreamer_worker).
+        if hippocampus is not None:
+            self.hippocampus = hippocampus
+        elif Hippocampus:
             self.hippocampus = Hippocampus(dreams_path=self.dreams_path)
         else:
             self.hippocampus = None
@@ -92,7 +96,9 @@ class DefaultModeNetwork:
                 print(f"Error parsing existing dream content: {e}")
         
         dreams.append(dream_data)
-        os.makedirs(os.path.dirname(self.dreams_path), exist_ok=True)
+        dir_part = os.path.dirname(self.dreams_path)
+        if dir_part:
+            os.makedirs(dir_part, exist_ok=True)
         with open(self.dreams_path, "w") as f:
             json.dump(dreams, f, indent=2)
             

@@ -17,10 +17,10 @@ class AutonomicNervousSystem:
     - (Future) Homeostasis maintenance
     """
 
-    def __init__(self):
+    def __init__(self, dmn=None):
         self.pid = os.getpid()
         self._log(f"🧠 [ANS] Autonomic System Online. PID: {self.pid}")
-        self.dmn = DefaultModeNetwork()
+        self.dmn = dmn if dmn is not None else DefaultModeNetwork()
         self.last_dream_time = datetime.datetime.now()
 
     def _log(self, msg):

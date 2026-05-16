@@ -1,13 +1,14 @@
 [tool.poetry]
 name = "lar-engine"
-version = "1.0.0"
+version = "2.1.0"
 description = "Lár DMN: A Showcase of Cognitive Architectures (Bicameral Memory, Autopoiesis) built on the Lár Engine."
 authors = ["Aadithya Vishnu Sajeev <axdithya@snath.ai>", "Vinay S <vinay@snath.ai>"]
 maintainers = ["Aadithya Vishnu Sajeev <axdithya@snath.ai>", "Vinay S <vinay@snath.ai>"]
 license = "Apache-2.0"
 readme = "README.md"
 packages = [
-    { include = "lar", from = "src" }
+    { include = "lar", from = "src" },
+    { include = "brain", from = "src" }
 ]
 
 [tool.poetry.dependencies]

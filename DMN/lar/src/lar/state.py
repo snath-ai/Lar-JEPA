@@ -35,6 +35,10 @@ class GraphState:
         """Returns a copy of the entire state dictionary."""
         return self._state.copy()
 
+    def delete(self, key: str) -> None:
+        """Removes a key from the state if it exists. No-op if key is absent."""
+        self._state.pop(key, None)
+
     def __repr__(self):
         """Provides a clean string representation for logging."""
         return f"GraphState({self._state})"
