@@ -234,11 +234,36 @@ Runs without cloud APIs. Set `OLLAMA_HOST` for real vector embeddings; the bridg
 
 ## Architecture Components
 
-**`AbstractCognitiveNode`** — Universal base class. Any model type implements this to become routable. Declares its `ModelType` and exposes a `execute(state)` interface. The spine never inspects beyond this contract.
+**`AbstractCognitiveNode`** — Universal base class. Any model type implements this to become routable. Declares its `ModelType` and exposes `encode()`, `forward()`, `decode()` contract. The spine never inspects beyond this interface. An LLM, a JEPA world model, a GNN, and a diffusion model are all identical from the executor's perspective.
 
-**`AbstractManifold`** — JEPA-specific subclass for continuous latent-space world models. Handles tensor state transport, prediction logging, and safety rollback hooks.
+**`AbstractManifold`** — JEPA-specific subclass of `AbstractCognitiveNode` for continuous latent-space world models. Specialises the interface to `embed_context()`, `predict_target()`, and `entropic_loss()`. Any architecture implementing this is routable in a `BatchNode` alongside `LLMNode` instances without modification.
 
 **`AbstractContextBridge`** — Stateless signal adapters for cross-modal composition. Allows LLMs to attend to JEPA latent predictions and JEPAs to condition on LLM semantic embeddings — without either node knowing about the other's internals.
+
+**`AbstractLatentFaultLocator`** — Formal specification of the Topological Vulnerability Targeting Engine (`core/interfaces.py`). Defines the mathematical principle for cross-modal fault localisation: given an environmental state observation and a structural topology sequence, encode both into a shared latent space, apply cross-attention (environmental state as Query, structural sequence as Key/Value), and extract the top-k structural positions at highest risk.
+
+```
+encode_environmental_state(x_E) → (B, D)         pooled Query
+encode_structural_sequence(x_S) → (1, N_S, D)    positional Key/Value
+localize_fault_coordinates(z_E, z_S, k) → (risk_score, coordinates, attention)
+```
+
+Six mathematical invariants (I1–I6) are formally specified and mechanically enforced by a 32-test behavioral invariant suite (`lar_jepa/tests/unit/test_latent_fault_locator_invariants.py`) passing across **four structurally unrelated domains**:
+
+| Domain | x_E (environmental state) | x_S (structural sequence) | C (fault coordinates) |
+|--------|--------------------------|--------------------------|----------------------|
+| **Materials** | Electrochemical operating conditions | Crystal lattice elemental sites | Topk instability sites |
+| **Seismic** | Crustal stress field readings | Geological fault segment topology | Topk seismic risk coordinates |
+| **Infrastructure** | Network traffic load telemetry | Server/router graph topology | Topk critical failure nodes |
+| **Biomedical/Genomic** | Single-cell RNA-seq disease profile | JEPA-encoded DNA gene sequence | Topk base-pair intervention coordinates |
+
+The same `CrossAttentionHead` architecture — `query_proj`, `key_proj`, `value_proj`, scaled dot-product attention, topk extraction — applies identically across crystal physics, geophysics, computer networks, and genomics. Any future implementation extending this ABC and passing invariants I1–I6 is a Derivative Work of this specification (Apache 2.0, prior art anchored by RFC 3161 certificate and Zenodo DOIs `10.5281/zenodo.19245328`, `10.5281/zenodo.19484646`).
+
+Run the full invariant suite:
+```bash
+pytest lar_jepa/tests/unit/test_latent_fault_locator_invariants.py -v
+# 32 passed: materials_domain · seismic_domain · network_infrastructure_domain · biomedical_genomic_domain
+```
 
 **`JEPA_DMN_Consolidation_Node`** — Live bridge writing committed JEPA trajectories into the DMN episodic memory store (ChromaDB). Expensive JEPA simulations become cheap long-term heuristics during sleep consolidation.
 
