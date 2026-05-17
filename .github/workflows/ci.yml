@@ -1,0 +1,67 @@
+name: CI — lar-jepa
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      # 1. Checkout this repo (lar_jepa)
+      - name: Checkout lar_jepa
+        uses: actions/checkout@v4
+        with:
+          path: lar_jepa
+
+      # 2. Checkout lar-engine (Layer 1)
+      - name: Checkout lar-engine
+        uses: actions/checkout@v4
+        with:
+          repository: snath-ai/lar
+          path: lar
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3. Checkout lar-dmn (Layer 2)
+      - name: Checkout lar-dmn
+        uses: actions/checkout@v4
+        with:
+          repository: snath-ai/DMN
+          path: DMN
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      # 4. Install the dependency chain in order
+      - name: Install lar-engine (Layer 1)
+        run: pip install -e lar/
+
+      - name: Install lar-dmn (Layer 2)
+        run: pip install -e DMN/
+
+      # 5. Install lar_jepa with dev deps
+      - name: Install lar_jepa
+        run: |
+          cd lar_jepa
+          poetry install --no-interaction --with dev
+
+      # 6. Run tests
+      - name: Run tests
+        run: |
+          cd lar_jepa
+          poetry run pytest -v
