@@ -52,8 +52,9 @@ import sys
 import os
 import math
 import pytest
-import torch
-import torch.nn as nn
+
+torch = pytest.importorskip("torch", reason="PyTorch not installed — skipping JEPA invariant tests")
+nn = torch.nn
 from abc import ABC
 
 # ---------------------------------------------------------------------------
