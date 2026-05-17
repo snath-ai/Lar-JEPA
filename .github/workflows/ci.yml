@@ -16,26 +16,28 @@ jobs:
         python-version: ["3.11", "3.12"]
 
     steps:
-      # 1. Checkout this repo (lar_jepa)
-      - name: Checkout lar_jepa
+      # Mirror the local Lar_Main/ layout so path deps resolve identically:
+      #   lar_jepa/pyproject.toml has:
+      #     lar-engine = {path = "../lar"}          → Lar_Main/lar  ✅
+      #     lar-dmn    = {path = "../DMN/lar"}       → Lar_Main/DMN/lar  ✅
+
+      - name: Checkout lar_jepa → Lar_Main/lar_jepa
         uses: actions/checkout@v4
         with:
-          path: lar_jepa
+          path: Lar_Main/lar_jepa
 
-      # 2. Checkout lar-engine (Layer 1)
-      - name: Checkout lar-engine
+      - name: Checkout lar-engine → Lar_Main/lar
         uses: actions/checkout@v4
         with:
           repository: snath-ai/lar
-          path: lar
+          path: Lar_Main/lar
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 3. Checkout lar-dmn (Layer 2)
-      - name: Checkout lar-dmn
+      - name: Checkout lar-dmn → Lar_Main/DMN/lar
         uses: actions/checkout@v4
         with:
           repository: snath-ai/DMN
-          path: DMN
+          path: Lar_Main/DMN/lar
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v5
@@ -47,21 +49,12 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      # 4. Install the dependency chain in order
-      - name: Install lar-engine (Layer 1)
-        run: pip install -e lar/
-
-      - name: Install lar-dmn (Layer 2)
-        run: pip install -e DMN/
-
-      # 5. Install lar_jepa with dev deps
-      - name: Install lar_jepa
+      - name: Install lar_jepa + dev deps
         run: |
-          cd lar_jepa
+          cd Lar_Main/lar_jepa
           poetry install --no-interaction --with dev
 
-      # 6. Run tests
       - name: Run tests
         run: |
-          cd lar_jepa
+          cd Lar_Main/lar_jepa
           poetry run pytest -v
