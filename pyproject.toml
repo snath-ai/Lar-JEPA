@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lar_jepa"
-version = "2.1.0"
+version = "2.1.1"
 description = "A deterministic cognitive architecture for latent sequence modeling and N-body spatial forecasting."
 authors = ["Aadithya Vishnu Sajeev <axdithya@snath.ai>"]
 license = "Apache-2.0"
