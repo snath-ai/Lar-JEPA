@@ -11,6 +11,9 @@
   <a href="https://github.com/snath-ai/Lar-JEPA">
     <img alt="Architecture" src="https://img.shields.io/badge/Architecture-Predictive%20World%20Models-blueviolet?style=for-the-badge">
   </a>
+  <a href="https://github.com/snath-ai/Lar-JEPA/releases/tag/v2.2.3">
+    <img alt="Release" src="https://img.shields.io/badge/Release-v2.2.3-green?style=for-the-badge">
+  </a>
 </p>
 
 </div>
@@ -151,6 +154,31 @@ python examples/materials_full_showcase.py
 
 Uses every Lár primitive in one graph: `FunctionalNode`, `BatchNode` (5 parallel branches), `BranchTriageNode`, `ReduceNode`, `LLMNode`, `HumanJuryNode`, `ToolNode`, `RouterNode`, `ClearErrorNode`, `AddValueNode`, `AdaptiveNode` — plus DMN recall and write at either end.
 
+### Domain-Agnostic ABC Examples (new in v2.2.3)
+
+Five standalone pipelines demonstrating that `AbstractModalEncoder`, `AbstractAttentionKernel`, `AbstractPerturbationOperator`, and `AbstractRoutingKernel` apply across structurally unrelated domains without modifying the Lár execution spine:
+
+| Example | Domain | Attention Kernel | Perturbation | Routing |
+|:---|:---|:---|:---|:---|
+| `finance_market_regime.py` | Quantitative finance | `LinearAttentionRegimeKernel` (O(N)) | Interest rate shock | RISK_ON / RISK_OFF / HEDGE |
+| `industrial_predictive_maintenance.py` | Wind-turbine gearbox | `CosineAttentionFaultKernel` | Bearing degradation | EMERGENCY / SCHEDULE / NOMINAL |
+| `cybersecurity_intrusion_detector.py` | Enterprise network security | `SparseWindowAttentionKernel` | Lateral movement | QUARANTINE / ESCALATE / MONITOR |
+| `climate_perturbation_model.py` | Earth-systems / climate | `HyenaConvAttentionKernel` (sub-quadratic) | CO₂ forcing shock | GLOBAL / REGIONAL / ARCHIVE |
+| `av_sensor_fusion.py` | Autonomous vehicle perception | `SSMAttentionKernel` (causal, O(N)) | Sensor degradation (fog/rain) | CAMERA_PRIMARY / LIDAR_PRIMARY / FUSION |
+
+Each example runs zero-dependency (only `torch`) and produces a HMAC-signed audit record:
+
+```bash
+cd lar_jepa
+python examples/finance_market_regime.py
+python examples/industrial_predictive_maintenance.py
+python examples/cybersecurity_intrusion_detector.py
+python examples/climate_perturbation_model.py
+python examples/av_sensor_fusion.py
+```
+
+The same mathematical spine — `encode → attend → perturb → route` — is structurally identical across all five. Domain semantics are entirely encapsulated in the ABC implementations. No modification to any Lár primitive is required.
+
 ### Single-node wall avoidance (original PoC)
 
 ```bash
@@ -170,6 +198,39 @@ poetry run python examples/advanced/13_world_model_jepa.py
 [RouterNode] → EXECUTE_NODE
 [MOTOR] Executing. Agent avoided the crash entirely.
 ```
+
+---
+
+## Routing Any Model — Current and Future
+
+`AbstractCognitiveNode` is the only contract the Lár executor requires. A node declares its `ModelType` and implements `encode()`, `forward()`, `decode()`. The graph executor calls these methods. It never inspects internals.
+
+This means any model architecture — present or future — is routable the moment it implements the ABC:
+
+```python
+# Models that exist today — all routable as first-class nodes
+class GPT4Node(AbstractCognitiveNode):       model_type = ModelType.LLM
+class GeminiNode(AbstractCognitiveNode):     model_type = ModelType.LLM
+class MambaNode(AbstractCognitiveNode):      model_type = ModelType.SSM
+class DiTNode(AbstractCognitiveNode):        model_type = ModelType.DIFFUSION
+class GraphSAGENode(AbstractCognitiveNode):  model_type = ModelType.GNN
+class CrystalJEPANode(AbstractManifold):     model_type = ModelType.JEPA
+
+# Models that do not yet exist — also routable, without modifying the spine
+class FutureFoundationModel(AbstractCognitiveNode):
+    model_type = ModelType.FUTURE
+    def encode(self, signal): ...   # whatever the architecture produces
+
+# Heterogeneous ensemble — mixed model types, single BatchNode
+BatchNode([GPT4Node(), MambaNode(), CrystalJEPANode(), FutureFoundationModel()])
+→ ReduceNode(strategy="confidence_weighted")
+```
+
+The `AbstractRoutingKernel` extends this to routing *decisions* — not just model execution. Any routing mechanism (threshold, RL policy, Bayesian posterior, ensemble vote, uncertainty estimate) satisfies `score() → float, route() → str` and plugs into the graph without modification. A routing kernel trained in 2028 on a dataset that doesn't exist yet is a valid `AbstractRoutingKernel` today.
+
+The `AbstractModalEncoder` extends this to *inputs* — any sensor, any modality, any data source encodes to `(B, output_dim)` and becomes addressable by the attention and routing layers. A camera encoder and a seismic sensor encoder and a spectroscopic encoder are interchangeable from the graph's perspective.
+
+**The invariant:** the graph executor is sealed. The ABCs are the extension points. Domain logic, model architecture, and routing strategy all live behind interfaces — the spine never changes.
 
 ---
 
@@ -255,14 +316,14 @@ Six mathematical invariants (I1–I6) are formally specified and mechanically en
 | **Materials** | Electrochemical operating conditions | Crystal lattice elemental sites | Topk instability sites |
 | **Seismic** | Crustal stress field readings | Geological fault segment topology | Topk seismic risk coordinates |
 | **Infrastructure** | Network traffic load telemetry | Server/router graph topology | Topk critical failure nodes |
-| **Biomedical/Genomic** | Single-cell RNA-seq disease profile | JEPA-encoded DNA gene sequence | Topk base-pair intervention coordinates |
+| **Industrial** | Multi-channel vibration/thermal sensor array | Drivetrain component positions | Topk mechanical fault loci |
 
 The same `CrossAttentionHead` architecture — `query_proj`, `key_proj`, `value_proj`, scaled dot-product attention, topk extraction — applies identically across crystal physics, geophysics, computer networks, and genomics. Any future implementation extending this ABC and passing invariants I1–I6 is a Derivative Work of this specification (Apache 2.0, prior art anchored by RFC 3161 certificate and Zenodo DOIs `10.5281/zenodo.19245328`, `10.5281/zenodo.19484646`, `10.5281/zenodo.19646405`).
 
 Run the full invariant suite:
 ```bash
 pytest lar_jepa/tests/unit/test_latent_fault_locator_invariants.py -v
-# 32 passed: materials_domain · seismic_domain · network_infrastructure_domain · biomedical_genomic_domain
+# 32 passed: materials_domain · seismic_domain · network_infrastructure_domain · industrial_domain
 ```
 
 **`AbstractAttentionKernel`** — Decouples the attention *mechanism* from the fault localisation pipeline. Any mechanism producing a normalised distribution over N positions and extracting k ordered indices satisfies the specification. Six invariants (A1–A6). Reference implementations: `ScaledDotProductKernel` (softmax(QKᵀ/√D)), `CosineAttentionKernel`. Valid future implementations: `LinearAttentionKernel`, `SparseAttentionKernel`, `SSMKernel`, `HyenaKernel` — any mechanism satisfying A1–A6 is a Derivative Work.
@@ -272,11 +333,11 @@ pytest lar_jepa/tests/unit/test_latent_fault_locator_invariants.py -v
 Δ      = encode_mutant(x_mut) − encode_wildtype(x_wt)
 z_pred = z_ctrl + α · Δ
 ```
-Zero-shot intervention prediction in any domain — without executing the intervention in the physical world. Six invariants (P1–P6). Reference implementations: `GenomicPerturbationOperator` (DNA wildtype vs knockout), `CrystalDefectOperator` (perfect vs defect-injected crystal), `MolecularBindingOperator` (unbound vs ligand-bound protein). Domain instantiations: genomic knockout, materials defect simulation, protein conformation, climate perturbation, molecular dynamics.
+Zero-shot intervention prediction in any domain — without executing the intervention in the physical world. Six invariants (P1–P6). Reference implementations: `CrystalDefectOperator` (perfect vs defect-injected crystal), `MolecularBindingOperator` (unbound vs ligand-bound conformation), `BearingDegradationOperator` (healthy vs degraded sensor signature), `InterestRateShockOperator` (baseline vs stressed portfolio), `LateralMovementOperator` (current-hop vs next-hop network state), `CO2ShockOperator` (baseline vs elevated-forcing atmosphere), `SensorDegradationOperator` (nominal vs adverse-weather perception). Domain instantiations: materials defect simulation, molecular dynamics, industrial condition monitoring, quantitative finance, network security, climate modelling, autonomous vehicle perception.
 
 **`AbstractRoutingKernel`** — Decouples routing *logic* from routing *mechanism*. Formalises the score-then-route pattern enabling deterministic, learned, probabilistic, and adaptive routing on the same graph executor. Four invariants (R1–R4). Reference implementations: `EntropicThresholdKernel` (current Lár-JEPA pattern), `MultiThresholdRoutingKernel`. Valid future implementations: `LearnedPolicyKernel` (RL), `EnsembleVoteKernel`, `UncertaintyKernel`, `CalibratedBayesianKernel`.
 
-**`AbstractModalEncoder`** — Universal modality-to-latent-space encoding interface. Separates domain-specific encoding logic from all downstream attention, routing, and memory operations — enabling plug-and-play encoder replacement without modifying any other pipeline component. Three invariants (M1–M3). Reference implementations: `GenomicSequenceEncoder`, `ElectrochemicalEncoder`, `NetworkTelemetryEncoder`. Valid future implementations: imaging encoder, spectroscopic encoder, protein structure encoder, seismic sensor encoder.
+**`AbstractModalEncoder`** — Universal modality-to-latent-space encoding interface. Separates domain-specific encoding logic from all downstream attention, routing, and memory operations — enabling plug-and-play encoder replacement without modifying any other pipeline component. Three invariants (M1–M3). Reference implementations: `ElectrochemicalEncoder`, `NetworkTelemetryEncoder`, `MarketStateEncoder` (price/vol/macro), `VibrothermalEncoder` (vibration/temperature), `AtmosphericStateEncoder` (ERA5 reanalysis), `CameraEncoder` (BEV patch features), `LidarEncoder` (range-view point cloud). Valid future implementations: spectroscopic encoder, protein structure encoder, seismic sensor encoder — any architecture producing `(B, output_dim)` output satisfies M1–M3.
 
 Run the full interface invariant suite (151 tests total):
 ```bash
