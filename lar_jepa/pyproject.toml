@@ -6,6 +6,7 @@ authors = ["Aadithya Vishnu Sajeev <axdithya@snath.ai>", "Vinay S <vinay@snath.a
 maintainers = ["Aadithya Vishnu Sajeev <axdithya@snath.ai>", "Vinay S <vinay@snath.ai>"]
 license = "Apache-2.0"
 readme = "README.md"
+packages = []
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.14"
