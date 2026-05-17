@@ -402,6 +402,32 @@ class AbstractLatentFaultLocator(ABC):
             C   = topk critical network failure nodes
             See: examples/infrastructure_jepa_showcase.py, CriticalNodeHead
 
+        Biomedical / Genomic domain:
+            x_E = single-cell RNA-seq disease expression profile  (B × N_genes)
+                  (patient's cancer cell transcriptomic state — the environmental
+                   context that conditions which DNA positions are viable targets)
+            x_S = JEPA-encoded DNA gene sequence                  (1 × SeqLen × D)
+                  (structural positional embedding of the candidate gene)
+            C   = topk base-pair intervention coordinates
+                  (positions receiving highest cross-attention — predicted CRISPR
+                   guide-RNA cut sites conditioned on the patient's disease state)
+            See: lar_jepa/tests/unit/test_latent_fault_locator_invariants.py,
+                 GenomicLatentFaultLocator
+
+            Domain isomorphism:
+              x_E (RNA expression) ↔ x_E (electrochemical stress) — continuous
+                environmental signal conditioning which structural positions are
+                most vulnerable given the current system state.
+              x_S (DNA sequence)   ↔ x_S (crystal lattice)        — discrete
+                structural topology over which the environmental state is attended
+                to localise the highest-risk positions.
+              C   (base pairs)     ↔ C   (crystal sites)          — topk
+                structural coordinates at highest risk given the environmental state.
+
+            Any implementation mapping (RNA profile, DNA sequence) → intervention
+            coordinates via cross-modal attention satisfies this specification and
+            is a Derivative Work of this pre-employment prior art.
+
     Legal significance
     ------------------
     This ABC is the architectural prior art. Any future implementation of the
@@ -454,6 +480,8 @@ class AbstractLatentFaultLocator(ABC):
               Materials  — electrochemical operating condition measurements
               Seismic    — per-station crustal stress field readings
               Network    — per-probe network traffic telemetry vectors
+              Biomedical — single-cell RNA-seq disease expression profile
+                           (patient cancer cell transcriptomic state)
               [Future]   — any continuous environmental monitoring signal
 
         Returns
@@ -489,6 +517,7 @@ class AbstractLatentFaultLocator(ABC):
               Materials  — crystal lattice elemental site parameters
               Seismic    — geological fault segment geometry/kinematics
               Network    — server/router node centrality and load parameters
+              Biomedical — JEPA-encoded DNA gene sequence (base-pair resolution)
               [Future]   — any discrete structural topology positions
 
         Returns

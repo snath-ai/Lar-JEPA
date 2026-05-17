@@ -233,6 +233,110 @@ class NetworkLatentFaultLocator(AbstractLatentFaultLocator):
         return risk, coords, attn.squeeze(1)
 
 
+class GenomicLatentFaultLocator(AbstractLatentFaultLocator):
+    """
+    AbstractLatentFaultLocator reference implementation for the Biomedical / Genomic domain.
+
+    Domain mapping:
+        x_E = single-cell RNA-seq disease expression profile  (B, N_genes)
+              The patient's cancer cell transcriptomic state — which genes are
+              overexpressed in this specific patient's disease context. Serves
+              as the environmental Query: "what is the current cellular state?"
+
+        x_S = JEPA-encoded DNA gene sequence                  (1, SeqLen, D)
+              Positional structural embedding of a candidate gene's coding
+              sequence. Serves as the structural Key/Value: "where in this
+              gene's structure can we intervene?"
+
+        C   = topk base-pair intervention coordinates
+              Positions in the DNA sequence receiving the highest cross-attention
+              weight from the RNA disease state — the predicted CRISPR guide-RNA
+              cut sites conditioned on this patient's specific disease expression.
+
+    This is a generic domain reference implementation. It is NOT Snath Locus.
+    It demonstrates that the AbstractLatentFaultLocator specification is satisfied
+    by the (RNA disease profile, DNA gene sequence) → intervention coordinates
+    mapping — establishing public prior art for the biomedical domain before
+    any commercial product release.
+
+    Published: lar_jepa/tests/unit/test_latent_fault_locator_invariants.py
+    Repository: github.com/snath-ai/Lar-JEPA (Apache 2.0)
+    """
+    EMBED_DIM = 64
+    SEQ_LEN   = 100   # base pairs in the structural sequence
+
+    def __init__(self):
+        # Environmental encoder: RNA expression profile → pooled disease-state vector
+        # In production: GeneJEPA (Perceiver, Tahoe-100M). Here: lightweight MLP.
+        self._rna_encoder = nn.Sequential(
+            nn.Linear(200, 256), nn.LayerNorm(256), nn.GELU(),
+            nn.Linear(256, self.EMBED_DIM)
+        )
+        # Structural encoder: DNA base-pair positions → positional embeddings
+        # In production: DNABERT-2 (117M). Here: lightweight MLP.
+        self._dna_encoder = nn.Sequential(
+            nn.Linear(4, 128), nn.LayerNorm(128), nn.GELU(),
+            nn.Linear(128, self.EMBED_DIM)
+        )
+        # Cross-attention head: RNA disease state queries DNA structural positions
+        self._q_proj = nn.Linear(self.EMBED_DIM, self.EMBED_DIM)
+        self._k_proj = nn.Linear(self.EMBED_DIM, self.EMBED_DIM)
+        self._v_proj = nn.Linear(self.EMBED_DIM, self.EMBED_DIM)
+        self._fc     = nn.Sequential(
+            nn.Linear(self.EMBED_DIM, 64), nn.ReLU(),
+            nn.Linear(64, 1), nn.Sigmoid()
+        )
+        for m in [self._rna_encoder, self._dna_encoder,
+                  self._q_proj, self._k_proj, self._v_proj, self._fc]:
+            m.eval()
+
+    def encode_environmental_state(self, x_E):
+        """
+        RNA expression profile → pooled disease-state embedding (B, D).
+        x_E: (B, N_genes) — per-gene expression values for this patient.
+        Returns the Query: the patient's disease context as a latent vector.
+
+        Invariant I1: output.shape == (B, EMBED_DIM) — 2D pooled tensor.
+        """
+        # x_E is (B, N_genes) — already pooled across genes, encode directly
+        return self._rna_encoder(x_E)   # (B, EMBED_DIM)
+
+    def encode_structural_sequence(self, x_S):
+        """
+        DNA gene sequence → positional base-pair embeddings (1, SeqLen, D).
+        x_S: (1, SeqLen, 4) — one-hot encoded DNA bases (A/C/G/T) at each position.
+        Returns the Key/Value: each base-pair position as a positional embedding.
+
+        Invariant I2: output.shape == (1, SeqLen, EMBED_DIM) — 3D positional tensor.
+        """
+        return self._dna_encoder(x_S)   # (1, SeqLen, EMBED_DIM)
+
+    def localize_fault_coordinates(self, z_E, z_S, k=3):
+        """
+        Cross-attend RNA disease state (Q) against DNA sequence positions (K/V).
+        Returns topk base-pair positions — predicted CRISPR guide-RNA cut sites.
+
+        The attention weight at position p quantifies: "given this patient's
+        RNA disease profile, how structurally relevant is base pair p as a
+        CRISPR intervention site?"
+
+        Invariants I3–I6: valid softmax distribution, bounded risk score,
+        valid position indices, exactly k coordinates.
+        """
+        B = z_E.shape[0]
+        z_S_exp = z_S.expand(B, -1, -1)
+        Q = self._q_proj(z_E).unsqueeze(1)           # (B, 1, D)
+        K = self._k_proj(z_S_exp)                    # (B, SeqLen, D)
+        V = self._v_proj(z_S_exp)                    # (B, SeqLen, D)
+        scores = torch.bmm(Q, K.transpose(1, 2)) / math.sqrt(self.EMBED_DIM)
+        attn   = torch.softmax(scores, dim=-1)        # (B, 1, SeqLen)  ← I3
+        ctx    = torch.bmm(attn, V).squeeze(1)        # (B, D)
+        risk   = self._fc(ctx).mean().item()           # ← I4: scalar in [0,1]
+        attn_2d = attn.squeeze(1)                     # (B, SeqLen)
+        coords = attn_2d.mean(0).topk(k).indices.tolist()  # ← I5, I6
+        return risk, coords, attn_2d
+
+
 # ===========================================================================
 # Parametrized fixture — the same six tests run against all three domains
 # ===========================================================================
@@ -249,6 +353,10 @@ class NetworkLatentFaultLocator(AbstractLatentFaultLocator):
     pytest.param(
         (NetworkLatentFaultLocator,   (4, 24, 6), (1, 40, 6), 40, 3),
         id="network_infrastructure_domain"
+    ),
+    pytest.param(
+        (GenomicLatentFaultLocator,   (4, 200),   (1, 100, 4), 100, 3),
+        id="biomedical_genomic_domain"
     ),
 ])
 def lfl_fixture(request):
@@ -459,12 +567,13 @@ class TestAbstractInterface:
         with pytest.raises(TypeError):
             Incomplete()
 
-    def test_all_three_domain_implementations_are_valid_subclasses(self):
-        """All three reference implementations satisfy the ABC contract."""
+    def test_all_domain_implementations_are_valid_subclasses(self):
+        """All four reference implementations satisfy the ABC contract."""
         for cls in [
             MaterialsLatentFaultLocator,
             SeismicLatentFaultLocator,
             NetworkLatentFaultLocator,
+            GenomicLatentFaultLocator,
         ]:
             assert issubclass(cls, AbstractLatentFaultLocator), (
                 f"{cls.__name__} is not a subclass of AbstractLatentFaultLocator"
@@ -480,6 +589,7 @@ class TestAbstractInterface:
             MaterialsLatentFaultLocator,
             SeismicLatentFaultLocator,
             NetworkLatentFaultLocator,
+            GenomicLatentFaultLocator,
         ]:
             instance = cls()
             assert hasattr(instance, "locate") and callable(instance.locate), (
