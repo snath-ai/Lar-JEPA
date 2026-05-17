@@ -16,10 +16,10 @@ jobs:
         python-version: ["3.11", "3.12"]
 
     steps:
-      # Mirror the local Lar_Main/ layout so path deps resolve identically:
-      #   lar_jepa/pyproject.toml has:
-      #     lar-engine = {path = "../lar"}          → Lar_Main/lar  ✅
-      #     lar-dmn    = {path = "../DMN/lar"}       → Lar_Main/DMN/lar  ✅
+      # Mirror the local Lar_Main/ layout so path deps resolve identically.
+      # lar_jepa/lar_jepa/pyproject.toml has:
+      #   lar-engine = {path = "../../lar"}   → Lar_Main/lar  ✅
+      # Tests live in Lar_Main/lar_jepa/lar_jepa/tests/
 
       - name: Checkout lar_jepa → Lar_Main/lar_jepa
         uses: actions/checkout@v4
@@ -49,12 +49,13 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Install lar_jepa + dev deps
+      # Install from the inner lar-jepa package (has dev deps + tests)
+      - name: Install lar-jepa + dev deps
         run: |
-          cd Lar_Main/lar_jepa
+          cd Lar_Main/lar_jepa/lar_jepa
           poetry install --no-interaction --with dev
 
       - name: Run tests
         run: |
-          cd Lar_Main/lar_jepa
-          poetry run pytest -v
+          cd Lar_Main/lar_jepa/lar_jepa
+          poetry run pytest tests/ -v
