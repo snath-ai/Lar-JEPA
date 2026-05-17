@@ -621,3 +621,485 @@ class AbstractEntropicRouter(ABC):
             STRUCTURAL_IMPASSE  — no valid trajectory found; raise exception.
         """
         pass
+
+
+# ---------------------------------------------------------------------------
+
+class AbstractAttentionKernel(ABC):
+    """
+    Formal specification of the attention mechanism used within cross-modal
+    cognitive pipelines in the Lár routing graph.
+
+    This ABC decouples the *mechanism* of attention from the
+    AbstractLatentFaultLocator specification. Any mechanism that satisfies
+    invariants A1–A6 is a valid kernel for cross-modal fault localisation,
+    cross-modal composition, or any other attention-gated routing step.
+
+    Mathematical Specification
+    --------------------------
+    AttentionKernel(Q, K, V, k) → (attention_weights, topk_indices)
+
+    Given:
+        Q  ∈ ℝ^(B × 1 × D)   — query (pooled environmental / source state)
+        K  ∈ ℝ^(B × N × D)   — keys  (structural / target sequence positions)
+        V  ∈ ℝ^(B × N × D)   — values (structural / target sequence positions)
+        k  ∈ ℤ₊               — number of positions to extract
+
+    Algorithm (the invariant — survives any mechanism change):
+        1. α = attention_fn(Q, K)  ∈ ℝ^(B × N)   weights over N positions
+        2. C = topk(α, k)                          k highest-weighted positions
+
+    Invariant properties verified by test_core_interface_invariants.py:
+        A1. attention_weights.shape[-1] == N        [covers all N positions]
+        A2. topk_indices ⊆ {0, …, N−1}             [valid position coordinates]
+        A3. attention_weights ≥ 0                   [non-negative weights]
+        A4. attention_weights.sum(dim=-1) ≈ 1.0    [normalised distribution]
+        A5. topk_indices ordered descending by weight
+        A6. len(topk_indices) == k                  [correct extraction count]
+
+    Valid mechanism implementations (non-exhaustive):
+        ScaledDotProductKernel   — softmax(QKᵀ / √D)          [standard]
+        LinearAttentionKernel    — φ(Q)φ(K)ᵀ / normalizer      [O(N) complexity]
+        SparseAttentionKernel    — local window or strided       [long sequences]
+        CosineAttentionKernel    — softmax(cos_sim(Q, K))
+        SSMAttentionKernel       — state-space recurrence kernel [causal]
+        HyenaKernel              — implicit long convolution      [sub-quadratic]
+        [Any future mechanism satisfying A1–A6]
+
+    Domain-agnosticism:
+        The mechanism is fully domain-agnostic. The same LinearAttentionKernel
+        attending from RNA expression to DNA base-pair positions also attends
+        from seismic stress tensors to fault segment topology — because the
+        kernel operates on (Q, K, V) tensors, not on domain semantics.
+
+    Authorship and prior art timestamp
+    ------------------------------------
+    Specified by: Aadithya Vishnu Sajeev
+    First published: May 2026, prior to employment commencement.
+    Repository: github.com/snath-ai/Lar-JEPA (Apache 2.0)
+    Anchored by: Zenodo DOIs 10.5281/zenodo.19245328, 10.5281/zenodo.19484646,
+                 10.5281/zenodo.19646405
+    """
+
+    @abstractmethod
+    def compute(
+        self,
+        query: Any,
+        key: Any,
+        value: Any,
+        k: int,
+    ) -> tuple:
+        """
+        Compute attention weights over the key/value sequence and extract
+        the top-k positions.
+
+        Invariants A1–A6 must hold for all valid inputs.
+
+        Parameters
+        ----------
+        query : Any
+            Pooled query vector. Shape: (B, 1, D) or (B, D).
+        key : Any
+            Key sequence. Shape: (B, N, D).
+        value : Any
+            Value sequence. Shape: (B, N, D). May be unused by some mechanisms.
+        k : int
+            Number of positions to extract. Must satisfy k ≤ N.
+
+        Returns
+        -------
+        tuple
+            (attention_weights, topk_indices)
+            attention_weights : tensor (B, N)  — normalised distribution
+            topk_indices      : tensor (k,)    — top-k indices, ordered descending
+        """
+        pass
+
+
+# ---------------------------------------------------------------------------
+
+class AbstractPerturbationOperator(ABC):
+    """
+    Formal specification of latent-space perturbation and zero-shot
+    counterfactual state prediction.
+
+    This ABC formalises the pattern of computing a directional perturbation
+    vector in latent space from a (wildtype, mutant) pair and linearly
+    applying it to a control state to predict the post-intervention outcome
+    — without executing the intervention in the real world.
+
+    Mathematical Specification
+    --------------------------
+    PerturbationOperator(z_ctrl, x_wt, x_mut, α) → z_pred
+
+    Given:
+        x_wt   — wildtype (unperturbed) input in the source domain
+        x_mut  — mutant (perturbed) input in the source domain
+        z_ctrl ∈ ℝ^(B × D) — control latent state to perturb
+        α      ∈ ℝ         — perturbation magnitude scalar
+
+    Algorithm (the invariant — survives encoder architecture changes):
+        1. z_wt   = encode_wildtype(x_wt)         ∈ ℝ^(B × D)
+        2. z_mut  = encode_mutant(x_mut)           ∈ ℝ^(B × D)
+        3. Δ      = z_mut − z_wt                   ∈ ℝ^(B × D)   perturbation vector
+        4. z_pred = z_ctrl + α · Δ                 ∈ ℝ^(B × D)   predicted state
+
+    Invariant properties verified by test_core_interface_invariants.py:
+        P1. encode_wildtype(x).shape == encode_mutant(x).shape == (B, D)
+        P2. perturbation_vector = encode_mutant(x_mut) − encode_wildtype(x_wt)
+        P3. predict_perturbed_state(z, wt, mut, α=0) ≈ z    [identity at α=0]
+        P4. predict_perturbed_state is linear in α
+            (doubling α doubles the displacement from z_ctrl)
+        P5. perturbation_vector(x_wt, x_mut) is independent of z_ctrl
+        P6. deterministic — same inputs always produce the same perturbation
+
+    Domain instantiations (non-exhaustive, all pre-employment prior art):
+
+        Genomic knockout prediction:
+            x_wt   = wildtype gene DNA / RNA sequence
+            x_mut  = CRISPR-edited or knocked-out variant sequence
+            z_ctrl = patient's current transcriptomic disease state
+            z_pred = predicted post-knockout cell transcriptomic state
+            α = 1.0 (full knockout)
+
+        Materials defect simulation:
+            x_wt   = perfect crystal lattice configuration
+            x_mut  = defect-injected crystal (vacancy, dopant, strain field)
+            z_ctrl = current electrochemical operating state
+            z_pred = predicted stability shift under the defect
+
+        Protein conformation prediction:
+            x_wt   = unbound protein structure
+            x_mut  = ligand-bound protein conformation
+            z_ctrl = cellular environmental context
+            z_pred = predicted conformational shift upon ligand binding
+
+        Climate perturbation modelling:
+            x_wt   = baseline atmospheric state
+            x_mut  = perturbed atmospheric state (elevated CO₂, temperature)
+            z_ctrl = current climate trajectory latent
+            z_pred = predicted system evolution under the perturbation
+
+        Molecular dynamics:
+            x_wt   = ground-state molecular geometry
+            x_mut  = excited / transition-state geometry
+            z_ctrl = reaction environment state
+            z_pred = predicted post-excitation trajectory
+
+        [Any domain in which Δ = f(perturbed) − f(unperturbed) is meaningful]
+
+    Authorship and prior art timestamp
+    ------------------------------------
+    Specified by: Aadithya Vishnu Sajeev
+    First published: May 2026, prior to employment commencement.
+    Repository: github.com/snath-ai/Lar-JEPA (Apache 2.0)
+    Anchored by: Zenodo DOIs 10.5281/zenodo.19245328, 10.5281/zenodo.19484646,
+                 10.5281/zenodo.19646405
+    """
+
+    @abstractmethod
+    def encode_wildtype(self, x_wt: Any) -> Any:
+        """
+        Encode the unperturbed (wildtype / baseline) input into latent space.
+
+        Invariant P1: output.shape == (B, D).
+
+        Parameters
+        ----------
+        x_wt : Any
+            Wildtype input in the source domain.
+
+        Returns
+        -------
+        Any
+            Latent vector z_wt ∈ ℝ^(B × D).
+        """
+        pass
+
+    @abstractmethod
+    def encode_mutant(self, x_mut: Any) -> Any:
+        """
+        Encode the perturbed (mutant / edited / intervened) input into latent space.
+
+        Invariant P1: output.shape must match encode_wildtype(x).shape == (B, D).
+
+        Parameters
+        ----------
+        x_mut : Any
+            Mutant / perturbed input in the source domain.
+
+        Returns
+        -------
+        Any
+            Latent vector z_mut ∈ ℝ^(B × D).
+        """
+        pass
+
+    def perturbation_vector(self, x_wt: Any, x_mut: Any) -> Any:
+        """
+        Compute the perturbation direction vector Δ = encode_mutant(x_mut) − encode_wildtype(x_wt).
+
+        This is the latent-space representation of the intervention — the direction
+        and magnitude of the effect in the model's learned latent geometry.
+
+        Invariant P2: this method always computes the additive difference of encodings.
+        Invariant P5: result depends only on (x_wt, x_mut), not on any control state.
+        Invariant P6: deterministic for same inputs.
+
+        Parameters
+        ----------
+        x_wt : Any
+            Wildtype / baseline input.
+        x_mut : Any
+            Mutant / perturbed input.
+
+        Returns
+        -------
+        Any
+            Perturbation vector Δ ∈ ℝ^(B × D).
+        """
+        return self.encode_mutant(x_mut) - self.encode_wildtype(x_wt)
+
+    def predict_perturbed_state(
+        self,
+        z_ctrl: Any,
+        x_wt: Any,
+        x_mut: Any,
+        alpha: float = 1.0,
+    ) -> Any:
+        """
+        Predict the post-perturbation latent state: z_pred = z_ctrl + α · Δ.
+
+        This is zero-shot intervention prediction. Without executing any physical
+        experiment, simulation step, or wet-lab assay, the operator predicts
+        where in latent space the system lands after the intervention.
+
+        Invariant P3: at α=0, returns z_ctrl unchanged (no intervention).
+        Invariant P4: displacement from z_ctrl scales linearly with α.
+
+        Parameters
+        ----------
+        z_ctrl : Any
+            Current control state ∈ ℝ^(B × D).
+        x_wt : Any
+            Wildtype / baseline input.
+        x_mut : Any
+            Mutant / perturbed input.
+        alpha : float
+            Perturbation magnitude.
+            1.0 = full intervention.  0.5 = partial.  0.0 = no change.
+
+        Returns
+        -------
+        Any
+            Predicted post-perturbation state z_pred ∈ ℝ^(B × D).
+        """
+        delta = self.perturbation_vector(x_wt, x_mut)
+        return z_ctrl + alpha * delta
+
+
+# ---------------------------------------------------------------------------
+
+class AbstractRoutingKernel(ABC):
+    """
+    Formal specification of the routing decision function within the
+    Lár heterogeneous cognitive graph.
+
+    This ABC decouples the routing *logic* from the routing *mechanism*.
+    The standard Lár RouterNode evaluates a Python predicate over GraphState.
+    AbstractRoutingKernel formalises the score-then-route pattern, enabling
+    learned, probabilistic, topological, and adaptive routing strategies
+    alongside the current deterministic threshold approach — without modifying
+    the graph executor.
+
+    Mathematical Specification
+    --------------------------
+    RoutingKernel(state) → (score, route_key)
+
+    Given:
+        state — current GraphState or any hashable state representation
+
+    Algorithm:
+        1. s = score(state)    ∈ ℝ     continuous routing signal
+        2. r = route(state)    ∈ str   discrete next-node key
+
+    Invariant properties verified by test_core_interface_invariants.py:
+        R1. score(state) returns a finite float
+        R2. route(state) returns a non-empty string
+        R3. same state always produces same (score, route) — deterministic
+        R4. route is consistent with score across independent calls
+
+    Valid routing implementations (non-exhaustive):
+        EntropicThresholdKernel   — route on JEPA entropic loss threshold [current]
+        ConfidenceThresholdKernel — route on model output confidence
+        TopologicalKernel         — route on structural graph properties
+        LearnedPolicyKernel       — RL-trained routing policy (score = Q-value)
+        EnsembleVoteKernel        — majority vote across heterogeneous agents
+        UncertaintyKernel         — route on epistemic uncertainty estimate
+        CalibratedBayesianKernel  — posterior predictive routing
+        [Any future routing mechanism satisfying R1–R4]
+
+    Authorship and prior art timestamp
+    ------------------------------------
+    Specified by: Aadithya Vishnu Sajeev
+    First published: May 2026, prior to employment commencement.
+    Repository: github.com/snath-ai/Lar-JEPA (Apache 2.0)
+    Anchored by: Zenodo DOIs 10.5281/zenodo.19245328, 10.5281/zenodo.19484646,
+                 10.5281/zenodo.19646405
+    """
+
+    @abstractmethod
+    def score(self, state: Any) -> float:
+        """
+        Compute a continuous routing signal from the current state.
+
+        The signal quantifies whatever drives the routing decision:
+        entropy, confidence, uncertainty, Q-value, distance, etc.
+
+        Invariant R1: returns a finite Python float.
+        Invariant R3: deterministic — same state, same score.
+
+        Parameters
+        ----------
+        state : Any
+            Current graph state or extracted signal value.
+
+        Returns
+        -------
+        float
+            Continuous routing score. Must be finite.
+        """
+        pass
+
+    @abstractmethod
+    def route(self, state: Any) -> str:
+        """
+        Return the routing key (next node identifier) for the given state.
+
+        Invariant R2: returns a non-empty string.
+        Invariant R3: deterministic — same state, same route.
+        Invariant R4: consistent with score — the mapping score→route is stable.
+
+        Parameters
+        ----------
+        state : Any
+            Current graph state or extracted signal value.
+
+        Returns
+        -------
+        str
+            The routing key / next node name. Non-empty.
+        """
+        pass
+
+
+# ---------------------------------------------------------------------------
+
+class AbstractModalEncoder(ABC):
+    """
+    Formal specification of the modality-specific encoder that maps raw
+    domain observations into the shared latent space of the Lár cognitive graph.
+
+    This ABC formalises the universal encoding pattern that appears across
+    all Lár pipelines: raw domain input → shared latent vector. It separates
+    the modality-specific encoding logic from all downstream graph routing,
+    attention, and memory operations — enabling plug-and-play encoder
+    replacement without modifying any other pipeline component.
+
+    Mathematical Specification
+    --------------------------
+    ModalEncoder(x) → z
+
+    Given:
+        x ∈ source_domain   — raw observation in any modality
+
+    Algorithm:
+        z = encode(x)       ∈ ℝ^(B × output_dim)
+
+    Invariant properties verified by test_core_interface_invariants.py:
+        M1. encode(x).shape == (B, output_dim)     [correct output shape]
+        M2. output_dim is constant across all encode() calls
+        M3. encode(x) is deterministic for the same input x
+
+    Domain instantiations (non-exhaustive, all pre-employment prior art):
+
+        Genomic sequence encoder:
+            input  = DNA / RNA sequence (one-hot or k-mer tokens)
+            output = structural / expression latent (B × D)
+            example: DNABERT-2 (117M), CrystalSiteEncoder
+
+        Spectroscopic encoder:
+            input  = spectral measurement array (B × wavelengths)
+            output = material property latent (B × D)
+
+        Network telemetry encoder:
+            input  = per-node traffic measurement vectors (B × N_nodes × features)
+            output = network state latent (B × D)
+
+        Electrochemical encoder:
+            input  = impedance / cycling measurements (B × timepoints × channels)
+            output = battery state latent (B × D)
+
+        Imaging encoder:
+            input  = pixel tensor (B × C × H × W)
+            output = visual feature latent (B × D)
+
+        Expression profile encoder:
+            input  = scRNA-seq count matrix (B × N_genes)
+            output = transcriptomic state latent (B × D)
+
+        Seismic sensor encoder:
+            input  = per-station stress field measurements (B × N_stations × d)
+            output = crustal state latent (B × D)
+
+        [Any modality for which a neural encoder produces (B × D) output]
+
+    Authorship and prior art timestamp
+    ------------------------------------
+    Specified by: Aadithya Vishnu Sajeev
+    First published: May 2026, prior to employment commencement.
+    Repository: github.com/snath-ai/Lar-JEPA (Apache 2.0)
+    Anchored by: Zenodo DOIs 10.5281/zenodo.19245328, 10.5281/zenodo.19484646,
+                 10.5281/zenodo.19646405
+    """
+
+    @property
+    @abstractmethod
+    def output_dim(self) -> int:
+        """
+        The embedding dimensionality D produced by encode().
+
+        Invariant M2: constant — same value returned on every call.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def modality(self) -> str:
+        """
+        Human-readable name of the modality this encoder handles.
+
+        Examples: "genomic_sequence", "electrochemical", "network_telemetry",
+                  "imaging", "seismic", "expression_profile", "spectroscopic"
+        """
+        pass
+
+    @abstractmethod
+    def encode(self, x: Any) -> Any:
+        """
+        Encode raw domain observations into the shared latent space.
+
+        Invariant M1: output.shape == (B, self.output_dim)
+        Invariant M3: deterministic for the same input x (in inference mode)
+
+        Parameters
+        ----------
+        x : Any
+            Raw domain observation. Shape and dtype are modality-specific.
+
+        Returns
+        -------
+        Any
+            Latent vector z ∈ ℝ^(B × output_dim).
+        """
+        pass
