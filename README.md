@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/snath-ai/lar">
-    <img alt="Spine" src="https://img.shields.io/badge/Spine-Lár%20Engine%20v2.1.0-blue?style=for-the-badge">
+    <img alt="Spine" src="https://img.shields.io/badge/Spine-Lár%20Engine%20v2.2.2-blue?style=for-the-badge">
   </a>
   <a href="https://github.com/snath-ai/Lar-JEPA">
     <img alt="Architecture" src="https://img.shields.io/badge/Architecture-Predictive%20World%20Models-blueviolet?style=for-the-badge">
@@ -179,7 +179,7 @@ poetry run python examples/advanced/13_world_model_jepa.py
 |:---|:---|:---|
 | **Tensor routing** | Crashes — no signal type | Native. `GraphState` passes tensors transparently. |
 | **Mathematical routing logic** | LLM call to decide next step | Deterministic Python `RouterNode` — `if collision_prob > 0.85: return "REPLAN"` |
-| **Tensor audit logging** | Not supported | `TensorSafeEncoder` (now fully implemented in Lár v2.1.0 engine core) safely serialises tensors to metadata: `{"__type__": "Tensor", "shape": [1, 768]}` |
+| **Tensor audit logging** | Not supported | `TensorSafeEncoder` (fully implemented in Lár engine core) safely serialises tensors to metadata: `{"__type__": "Tensor", "shape": [1, 768]}` |
 | **Heterogeneous model swarm** | Single model type assumed | `BatchNode([LLM, JEPA, GNN])` — aggregated by `ReduceNode` |
 | **Safety rollback** | Hope the LLM doesn't hallucinate | `RouterNode` vetoes bad predicted states before execution |
 | **Long-term learning** | None | DMN sleep cycle consolidates JEPA simulations into persistent heuristics |
@@ -257,12 +257,32 @@ Six mathematical invariants (I1–I6) are formally specified and mechanically en
 | **Infrastructure** | Network traffic load telemetry | Server/router graph topology | Topk critical failure nodes |
 | **Biomedical/Genomic** | Single-cell RNA-seq disease profile | JEPA-encoded DNA gene sequence | Topk base-pair intervention coordinates |
 
-The same `CrossAttentionHead` architecture — `query_proj`, `key_proj`, `value_proj`, scaled dot-product attention, topk extraction — applies identically across crystal physics, geophysics, computer networks, and genomics. Any future implementation extending this ABC and passing invariants I1–I6 is a Derivative Work of this specification (Apache 2.0, prior art anchored by RFC 3161 certificate and Zenodo DOIs `10.5281/zenodo.19245328`, `10.5281/zenodo.19484646`).
+The same `CrossAttentionHead` architecture — `query_proj`, `key_proj`, `value_proj`, scaled dot-product attention, topk extraction — applies identically across crystal physics, geophysics, computer networks, and genomics. Any future implementation extending this ABC and passing invariants I1–I6 is a Derivative Work of this specification (Apache 2.0, prior art anchored by RFC 3161 certificate and Zenodo DOIs `10.5281/zenodo.19245328`, `10.5281/zenodo.19484646`, `10.5281/zenodo.19646405`).
 
 Run the full invariant suite:
 ```bash
 pytest lar_jepa/tests/unit/test_latent_fault_locator_invariants.py -v
 # 32 passed: materials_domain · seismic_domain · network_infrastructure_domain · biomedical_genomic_domain
+```
+
+**`AbstractAttentionKernel`** — Decouples the attention *mechanism* from the fault localisation pipeline. Any mechanism producing a normalised distribution over N positions and extracting k ordered indices satisfies the specification. Six invariants (A1–A6). Reference implementations: `ScaledDotProductKernel` (softmax(QKᵀ/√D)), `CosineAttentionKernel`. Valid future implementations: `LinearAttentionKernel`, `SparseAttentionKernel`, `SSMKernel`, `HyenaKernel` — any mechanism satisfying A1–A6 is a Derivative Work.
+
+**`AbstractPerturbationOperator`** — Formal specification of latent-space counterfactual prediction. Formalises the pattern:
+```
+Δ      = encode_mutant(x_mut) − encode_wildtype(x_wt)
+z_pred = z_ctrl + α · Δ
+```
+Zero-shot intervention prediction in any domain — without executing the intervention in the physical world. Six invariants (P1–P6). Reference implementations: `GenomicPerturbationOperator` (DNA wildtype vs knockout), `CrystalDefectOperator` (perfect vs defect-injected crystal), `MolecularBindingOperator` (unbound vs ligand-bound protein). Domain instantiations: genomic knockout, materials defect simulation, protein conformation, climate perturbation, molecular dynamics.
+
+**`AbstractRoutingKernel`** — Decouples routing *logic* from routing *mechanism*. Formalises the score-then-route pattern enabling deterministic, learned, probabilistic, and adaptive routing on the same graph executor. Four invariants (R1–R4). Reference implementations: `EntropicThresholdKernel` (current Lár-JEPA pattern), `MultiThresholdRoutingKernel`. Valid future implementations: `LearnedPolicyKernel` (RL), `EnsembleVoteKernel`, `UncertaintyKernel`, `CalibratedBayesianKernel`.
+
+**`AbstractModalEncoder`** — Universal modality-to-latent-space encoding interface. Separates domain-specific encoding logic from all downstream attention, routing, and memory operations — enabling plug-and-play encoder replacement without modifying any other pipeline component. Three invariants (M1–M3). Reference implementations: `GenomicSequenceEncoder`, `ElectrochemicalEncoder`, `NetworkTelemetryEncoder`. Valid future implementations: imaging encoder, spectroscopic encoder, protein structure encoder, seismic sensor encoder.
+
+Run the full interface invariant suite (151 tests total):
+```bash
+pytest lar_jepa/tests/unit/ -v
+# 151 passed across AbstractLatentFaultLocator (I1–I6), AbstractAttentionKernel (A1–A6),
+# AbstractPerturbationOperator (P1–P6), AbstractRoutingKernel (R1–R4), AbstractModalEncoder (M1–M3)
 ```
 
 **`JEPA_DMN_Consolidation_Node`** — Live bridge writing committed JEPA trajectories into the DMN episodic memory store (ChromaDB). Expensive JEPA simulations become cheap long-term heuristics during sleep consolidation.
