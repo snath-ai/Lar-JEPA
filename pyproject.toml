@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lar_jepa"
-version = "0.1.0"
+version = "2.1.0"
 description = "A deterministic cognitive architecture for latent sequence modeling and N-body spatial forecasting."
 authors = ["Aadithya Vishnu Sajeev <axdithya@snath.ai>"]
 license = "Apache-2.0"
@@ -10,10 +10,8 @@ keywords = ["JEPA", "Cognitive Architecture", "Spatial Forensics", "Deterministi
 
 [tool.poetry.dependencies]
 python = "^3.11"
-lar-engine = "^2.1.0"
-
-[tool.poetry.extras]
-dmn = ["chromadb", "requests"]
+lar-engine = {path = "../lar", develop = true}
+lar-dmn    = {path = "../DMN/lar", develop = true}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

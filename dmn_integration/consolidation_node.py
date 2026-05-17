@@ -26,7 +26,7 @@ episodic memory (Hippocampus / ChromaDB) so that:
 DMN Hippocampus interface
 -------------------------
   save_memory(text: str, embedding: List[float], metadata: dict)
-      Writes a memory to ChromaDB +  the JSON journal.
+      Writes a memory to ChromaDB + the JSON journal.
   recall(query: str, max_memories: int) -> str
       Retrieves semantically relevant memories from ChromaDB.
 
@@ -37,27 +37,13 @@ Doctrine' for linking JEPA predictive simulation to the DMN memory substrate.
 See DMN v3.0 preprint: 'The Dream Loop' (to be published Zenodo, April 2026).
 """
 
-import sys
-import os
 import json
 import datetime
 from typing import Any, Dict, List, Optional
 
 # ---------------------------------------------------------------------------
-# DMN Hippocampus import — tries canonical DMN first, then embedded fallback
+# DMN Hippocampus import — lar-dmn must be installed (pip install -e ../DMN/lar)
 # ---------------------------------------------------------------------------
-_HERE = os.path.dirname(__file__)
-_REPO_ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
-
-# Priority 1: canonical DMN repo (Lar_Main/DMN/lar/src) — always most current
-_CANONICAL_DMN_SRC = os.path.join(_REPO_ROOT, "DMN", "lar", "src")
-# Priority 2: embedded copy inside lar_jepa (updated on sync)
-_EMBEDDED_DMN_SRC = os.path.abspath(os.path.join(_HERE, "..", "DMN", "lar", "src"))
-
-for _path in [_CANONICAL_DMN_SRC, _EMBEDDED_DMN_SRC]:
-    if os.path.isdir(_path) and _path not in sys.path:
-        sys.path.insert(0, _path)
-
 try:
     from brain.hippocampus import Hippocampus
     _HIPPOCAMPUS_AVAILABLE = True
@@ -93,6 +79,11 @@ class JEPA_DMN_Consolidation_Node:
     Both operations degrade gracefully if the DMN Hippocampus is unavailable
     (e.g., ChromaDB not initialised, running in test mode). The JEPA
     execution spine is never blocked by DMN availability.
+
+    Install requirement
+    -------------------
+    Run ``pip install -e ../DMN/lar`` (or ``poetry install`` in the project
+    root after wiring the lar-dmn path dep) so that ``brain`` is importable.
     """
 
     def __init__(
@@ -100,18 +91,6 @@ class JEPA_DMN_Consolidation_Node:
         chroma_path: Optional[str] = None,
         dreams_path: Optional[str] = None,
     ):
-        """
-        Initialise the consolidation bridge.
-
-        Parameters
-        ----------
-        chroma_path : str, optional
-            Path to the ChromaDB persistent store. Defaults to the DMN's
-            default at DMN/lar/data/chroma_db.
-        dreams_path : str, optional
-            Path to the DMN JSON journal. Defaults to the DMN's default
-            at DMN/lar/memory/dreams.json.
-        """
         self._hippocampus: Optional["Hippocampus"] = None
 
         if _HIPPOCAMPUS_AVAILABLE:
@@ -122,11 +101,16 @@ class JEPA_DMN_Consolidation_Node:
                 )
                 print("✅ [JEPA→DMN] Hippocampus connection established.")
             except Exception as e:
-                print(f"⚠️  [JEPA→DMN] Hippocampus init failed: {e}. "
-                      "Running in degraded mode — trajectory heuristics will not be persisted.")
+                print(
+                    f"⚠️  [JEPA→DMN] Hippocampus init failed: {e}. "
+                    "Running in degraded mode — trajectory heuristics will not be persisted."
+                )
         else:
-            print("⚠️  [JEPA→DMN] DMN Hippocampus not importable. "
-                  "Running in degraded mode — trajectory heuristics will not be persisted.")
+            print(
+                "⚠️  [JEPA→DMN] lar-dmn not installed. "
+                "Run: pip install -e ../DMN/lar\n"
+                "Running in degraded mode — trajectory heuristics will not be persisted."
+            )
 
     # ------------------------------------------------------------------
 
@@ -137,37 +121,10 @@ class JEPA_DMN_Consolidation_Node:
     ) -> bool:
         """
         Consolidate a committed JEPA trajectory into the DMN episodic store.
-
-        Call this after AbstractEntropicRouter returns COMMIT_TRAJECTORY. The
-        trajectory_log captures what the JEPA predicted, what route was chosen,
-        and what the outcome was. This record becomes retrievable future context.
-
-        Parameters
-        ----------
-        trajectory_log : dict
-            A dictionary describing the committed trajectory. Expected keys:
-
-            - domain       : str   — domain label (e.g. "spatial_kinematics")
-            - action       : Any   — the action vector that was committed
-            - predicted_state : Any — the JEPA's ŝ for this action
-            - entropic_loss  : float — H(ŝ) score at commit time
-            - outcome      : str   — "committed" | "replanned" | "impasse"
-            - metadata     : dict  — any additional domain-specific context
-
-        embedding : List[float], optional
-            Pre-computed embedding vector for the trajectory summary text.
-            If not provided, the Hippocampus will attempt to generate one
-            via its configured Ollama embedding endpoint.
-
-        Returns
-        -------
-        bool
-            True if the heuristic was successfully written, False otherwise.
         """
         if self._hippocampus is None:
             return False
 
-        # Construct a human-readable summary for semantic search
         domain      = trajectory_log.get("domain", "unknown")
         outcome     = trajectory_log.get("outcome", "unknown")
         entropy     = trajectory_log.get("entropic_loss", -1.0)
@@ -187,8 +144,6 @@ class JEPA_DMN_Consolidation_Node:
             "timestamp":     datetime.datetime.utcnow().isoformat(),
             **trajectory_log.get("metadata", {}),
         }
-        # ChromaDB requires all metadata values to be str/int/float/bool.
-        # Serialize any list or dict values to JSON strings.
         metadata = {
             k: json.dumps(v) if isinstance(v, (list, dict)) else v
             for k, v in raw_meta.items()
@@ -198,12 +153,10 @@ class JEPA_DMN_Consolidation_Node:
             if embedding:
                 self._hippocampus.save_memory(summary, embedding, metadata)
             else:
-                # Generate embedding via DMN Hippocampus's own embed endpoint
                 generated_embedding = self._hippocampus._generate_embedding(summary)
                 if generated_embedding:
                     self._hippocampus.save_memory(summary, generated_embedding, metadata)
                 else:
-                    # Write to JSON journal only (no vector search, but still persisted)
                     self._hippocampus.save_memory(summary, [], metadata)
             return True
         except Exception as e:
@@ -220,23 +173,6 @@ class JEPA_DMN_Consolidation_Node:
         """
         Retrieve semantically relevant JEPA trajectory heuristics from the
         DMN episodic store to warm the current planning cycle.
-
-        Call this at the start of a JEPA planning cycle to provide the
-        BrainNode or the JEPA encoder with prior successful strategies.
-
-        Parameters
-        ----------
-        query : str
-            A natural-language description of the current planning context
-            (e.g. "collision avoidance in dense 3-body orbital field").
-
-        max_results : int
-            Maximum number of heuristics to retrieve. Default 3.
-
-        Returns
-        -------
-        str
-            Concatenated heuristic summaries, or empty string if none available.
         """
         if self._hippocampus is None:
             return ""
@@ -252,12 +188,8 @@ class JEPA_DMN_Consolidation_Node:
     def extract_heuristic_from_trajectory(self, trajectory_log: Any) -> Any:
         """
         Legacy entry point — delegates to write_trajectory_heuristic.
-
-        Retained for backward compatibility with any code referencing the
-        original stub interface. New code should call write_trajectory_heuristic
-        directly for explicit control over the embedding.
+        Retained for backward compatibility.
         """
         if isinstance(trajectory_log, dict):
             return self.write_trajectory_heuristic(trajectory_log)
-        # If given a non-dict, wrap it and write
         return self.write_trajectory_heuristic({"raw": str(trajectory_log)})
