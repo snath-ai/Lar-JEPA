@@ -352,7 +352,7 @@ class AbstractLatentFaultLocator(ABC):
                                         d_S: per-position feature dimension)
         k   ∈ ℤ₊                  —  number of fault coordinates to extract
 
-    Algorithm (the invariant — survives any implementation change):
+    Reference Algorithm (one compliant instantiation; the formal invariants are I1–I6 below):
         1. Z_E = Encoder_E(x_E)  ∈ ℝ^(B × D)        environmental latent,
                                                        mean-pooled → Query
         2. Z_S = Encoder_S(x_S)  ∈ ℝ^(1 × N_S × D)  structural latent,
