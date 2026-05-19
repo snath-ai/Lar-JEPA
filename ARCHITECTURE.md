@@ -82,9 +82,9 @@ class AbstractContextBridge(ABC):
 
 ---
 
-## The Nine Abstract Base Classes
+## The Ten Abstract Base Classes
 
-`core/interfaces.py` defines nine ABCs that together form the **complete cognitive
+`core/interfaces.py` defines ten ABCs that together form the **complete cognitive
 contract** of the Lár-JEPA system. Every concrete implementation is a Derivative Work
 under Apache 2.0. Every invariant is machine-checkable, domain-agnostic, and
 timestamped in the Zenodo prior-art chain.
@@ -377,12 +377,12 @@ class AbstractDivergenceRouter(ABC):
 ```
 
 **Invariants:**
-- **V1**: `encode_stream_a(x).confidence ∈ [0, 1]`
-- **V2**: `encode_stream_b(x).confidence ∈ [0, 1]`
-- **V3**: `divergence(z_a, z_b) ≥ 0` for all inputs
-- **V4**: `divergence(z, z) = 0` (identity invariant)
-- **V5**: `route(c_a, c_b, D)` is a deterministic pure function — identical inputs always produce identical `RouteDecision`
-- **V6**: `route` receives only scalars `(c_a, c_b, D)` — **blind to stream content**; no access to `z_a` or `z_b`
+- **V1 (Stream Independence)**: `encode_stream_a` and `encode_stream_b` must never share mutable state across calls. The two encoding paths are epistemically isolated.
+- **V2 (Geometric Divergence)**: `divergence(z_a, z_b) ∈ ℝ≥0` for all inputs. Returns a non-negative real scalar.
+- **V3 (Symmetry Breaking Allowed)**: `divergence(z_a, z_b)` need NOT equal `divergence(z_b, z_a)`. Asymmetric metrics (e.g. KL divergence) are valid.
+- **V4 (Content Blindness)**: `route` receives only scalars `(c_a, c_b, D)` — no access to `z_a` or `z_b`. Not a fusion layer in disguise.
+- **V5 (Routing Completeness)**: `route` returns exactly one of {Execute, Investigate, Defer, Halt}. Identical inputs always produce identical output.
+- **V6 (Safety-Learning Equivalence)**: Halt ≡ maximum learning signal. STRUCTURAL_IMPASSE is the model's knowledge boundary — the most valuable training case, not a failure.
 
 **Four routing rules:**
 | Rule | Condition | Decision |
@@ -434,12 +434,13 @@ are the same mechanism.
 | `examples/cybersecurity_intrusion_detector.py` | AbstractModalEncoder, AbstractAttentionKernel, AbstractPerturbationOperator, AbstractRoutingKernel |
 | `examples/climate_perturbation_model.py` | AbstractModalEncoder, AbstractAttentionKernel, AbstractPerturbationOperator, AbstractRoutingKernel |
 | `examples/av_sensor_fusion.py` | AbstractModalEncoder ×2, AbstractAttentionKernel, AbstractPerturbationOperator, AbstractRoutingKernel |
-| `examples/powergrid_full_stack.py` | **All 9 ABCs** — canonical proof of domain-agnosticism |
+| `examples/powergrid_full_stack.py` | **All 9 pre-v2.3 ABCs** — canonical proof of domain-agnosticism |
 
 The static proof embedded in `powergrid_full_stack.py` (`prove_abc_coverage()`) imports
-all nine ABCs, confirms each is subclassed, and emits a machine-readable coverage report.
-This is the court-admissible artifact establishing Lár-JEPA as the prior-art origin of
-the nine-ABC cognitive contract.
+all nine pre-v2.3 ABCs, confirms each is subclassed, and emits a machine-readable coverage report.
+`AbstractDivergenceRouter` (tenth ABC, added in v2.3.0) is specified in `core/interfaces.py`
+and anchored by DOI 10.5281/zenodo.20278781. Together these form the court-admissible artifact
+establishing Lár-JEPA as the prior-art origin of the ten-ABC cognitive contract.
 
 ---
 

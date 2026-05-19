@@ -23,14 +23,14 @@ scores and divergence between predictions.
 
 **Invariants:**
 
-| Invariant | Specification |
-|---|---|
-| V1 | `encode_stream_a(x).confidence ∈ [0, 1]` |
-| V2 | `encode_stream_b(x).confidence ∈ [0, 1]` |
-| V3 | `divergence(z_a, z_b) ≥ 0` for all inputs |
-| V4 | `divergence(z, z) = 0` (identity invariant) |
-| V5 | `route(c_a, c_b, D)` is a deterministic pure function |
-| V6 | `route` receives only scalars `(c_a, c_b, D)` — blind to stream content |
+| Invariant | Name | Specification |
+|---|---|---|
+| V1 | Stream Independence | `encode_stream_a` and `encode_stream_b` must never share mutable state across calls |
+| V2 | Geometric Divergence | `divergence(z_a, z_b) ∈ ℝ≥0` for all inputs — non-negative real scalar |
+| V3 | Symmetry Breaking Allowed | `divergence(z_a, z_b)` need NOT equal `divergence(z_b, z_a)` — asymmetric metrics valid |
+| V4 | Content Blindness | `route` receives only scalars `(c_a, c_b, D)` — no access to `z_a` or `z_b` |
+| V5 | Routing Completeness | `route` returns exactly one of {Execute, Investigate, Defer, Halt} |
+| V6 | Safety-Learning Equivalence | Halt ≡ maximum learning signal — contradiction is information, not failure |
 
 **Four routing rules:**
 

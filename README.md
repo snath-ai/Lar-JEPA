@@ -154,17 +154,18 @@ python examples/materials_full_showcase.py
 
 Uses every Lár primitive in one graph: `FunctionalNode`, `BatchNode` (5 parallel branches), `BranchTriageNode`, `ReduceNode`, `LLMNode`, `HumanJuryNode`, `ToolNode`, `RouterNode`, `ClearErrorNode`, `AddValueNode`, `AdaptiveNode` — plus DMN recall and write at either end.
 
-### Domain-Agnostic ABC Examples (new in v2.2.3)
+### Domain-Agnostic ABC Examples (updated in v2.3.0)
 
-Five standalone pipelines demonstrating that `AbstractModalEncoder`, `AbstractAttentionKernel`, `AbstractPerturbationOperator`, and `AbstractRoutingKernel` apply across structurally unrelated domains without modifying the Lár execution spine:
+Six standalone pipelines demonstrating that the Lár ABC suite applies across structurally unrelated domains without modifying the execution spine. The first five demonstrate `AbstractModalEncoder`, `AbstractAttentionKernel`, `AbstractPerturbationOperator`, and `AbstractRoutingKernel`. The sixth (v2.3.0) demonstrates `AbstractDivergenceRouter` in a biomedical multi-stream setting:
 
-| Example | Domain | Attention Kernel | Perturbation | Routing |
-|:---|:---|:---|:---|:---|
-| `finance_market_regime.py` | Quantitative finance | `LinearAttentionRegimeKernel` (O(N)) | Interest rate shock | RISK_ON / RISK_OFF / HEDGE |
-| `industrial_predictive_maintenance.py` | Wind-turbine gearbox | `CosineAttentionFaultKernel` | Bearing degradation | EMERGENCY / SCHEDULE / NOMINAL |
-| `cybersecurity_intrusion_detector.py` | Enterprise network security | `SparseWindowAttentionKernel` | Lateral movement | QUARANTINE / ESCALATE / MONITOR |
-| `climate_perturbation_model.py` | Earth-systems / climate | `HyenaConvAttentionKernel` (sub-quadratic) | CO₂ forcing shock | GLOBAL / REGIONAL / ARCHIVE |
-| `av_sensor_fusion.py` | Autonomous vehicle perception | `SSMAttentionKernel` (causal, O(N)) | Sensor degradation (fog/rain) | CAMERA_PRIMARY / LIDAR_PRIMARY / FUSION |
+| Example | Domain | ABCs Used | Key Signal |
+|:---|:---|:---|:---|
+| `finance_market_regime.py` | Quantitative finance | ModalEncoder, AttentionKernel, PerturbationOperator, RoutingKernel | Interest rate shock → RISK_ON / RISK_OFF / HEDGE |
+| `industrial_predictive_maintenance.py` | Wind-turbine gearbox | ModalEncoder, AttentionKernel, PerturbationOperator, RoutingKernel | Bearing degradation → EMERGENCY / SCHEDULE / NOMINAL |
+| `cybersecurity_intrusion_detector.py` | Enterprise network security | ModalEncoder, AttentionKernel, PerturbationOperator, RoutingKernel | Lateral movement → QUARANTINE / ESCALATE / MONITOR |
+| `climate_perturbation_model.py` | Earth-systems / climate | ModalEncoder, AttentionKernel, PerturbationOperator, RoutingKernel | CO₂ forcing shock → GLOBAL / REGIONAL / ARCHIVE |
+| `av_sensor_fusion.py` | Autonomous vehicle perception | ModalEncoder ×2, AttentionKernel, PerturbationOperator, RoutingKernel | Sensor degradation → CAMERA_PRIMARY / LIDAR_PRIMARY / FUSION |
+| *(v2.3.0)* Medical imaging | Chest X-ray + radiology report | **DivergenceRouter** (V1–V6): `stream_a` = scan latent (ViT/BioViL), `stream_b` = report latent (BioBERT) | Image–report disagreement → Execute / Investigate / Defer / Halt |
 
 Each example runs zero-dependency (only `torch`) and produces a HMAC-signed audit record:
 
@@ -177,7 +178,7 @@ python examples/climate_perturbation_model.py
 python examples/av_sensor_fusion.py
 ```
 
-The same mathematical spine — `encode → attend → perturb → route` — is structurally identical across all five. Domain semantics are entirely encapsulated in the ABC implementations. No modification to any Lár primitive is required.
+The same mathematical spine is structurally identical across all domains. Domain semantics are entirely encapsulated in the ABC implementations. No modification to any Lár primitive is required.
 
 ### Single-node wall avoidance (original PoC)
 

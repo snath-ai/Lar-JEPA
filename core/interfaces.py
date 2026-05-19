@@ -1130,18 +1130,26 @@ class AbstractDivergenceRouter(ABC):
         decision = route(c_A, c_B, D)
 
     Invariant properties (V1–V6):
-        V1. encode_stream_a(x).confidence ∈ [0, 1]
-        V2. encode_stream_b(x).confidence ∈ [0, 1]
-        V3. divergence(z_A, z_B) ≥ 0  for all z_A, z_B
-        V4. divergence(z, z) = 0       for all z  (identity invariant)
-        V5. route(c_A, c_B, D) is a deterministic pure function —
-            identical inputs always produce identical RouteDecision
-        V6. route receives only scalars (c_A, c_B, D) — it has no access
-            to z_A or z_B; the routing decision is blind to stream content
+        V1. Stream Independence: encode_stream_a and encode_stream_b must
+            never share mutable state across calls. The two encoding paths
+            are epistemically isolated — neither influences the other.
+        V2. Geometric Divergence: divergence(z_A, z_B) ∈ ℝ≥0 for all
+            z_A, z_B. The function returns a non-negative real scalar.
+        V3. Symmetry Breaking Allowed: divergence(z_A, z_B) need NOT equal
+            divergence(z_B, z_A). Asymmetric metrics (e.g. KL divergence)
+            are valid. Symmetry is not required.
+        V4. Content Blindness: route() receives only scalars (c_A, c_B, D).
+            It has no access to z_A or z_B — not a fusion layer in disguise.
+        V5. Routing Completeness: route() returns exactly one member of
+            {Execute, Investigate, Defer, Halt}. No other return is valid.
+        V6. Safety-Learning Equivalence: Halt ≡ maximum learning signal.
+            STRUCTURAL_IMPASSE is the model's knowledge boundary — the most
+            valuable training case, not a failure. Contradiction is
+            information.
 
-    V6 is the most important invariant. A route() function that inspects
+    V4 is the most important invariant. A route() function that inspects
     stream content is a fusion layer in disguise — it becomes a third model
-    that blends the two streams before making a decision. V6 enforces the
+    that blends the two streams before making a decision. V4 enforces the
     architectural boundary: the RouterNode reads the room, not the case.
 
     Four Routing Rules
@@ -1219,42 +1227,50 @@ class AbstractDivergenceRouter(ABC):
     @abstractmethod
     def encode_stream_a(self, x_a: Any) -> tuple[Any, float]:
         """
-        V1: Encode Stream A into a latent representation.
+        V1 (Stream Independence): Encode Stream A into a latent representation.
+
+        This method must share no mutable state with encode_stream_b across
+        calls. The two encoding paths are epistemically isolated.
 
         Returns
         -------
         tuple[Any, float]
             (z_a, confidence_a) where:
-            - z_a        is the latent tensor for stream A
-            - confidence_a ∈ [0, 1]  (V1 invariant: clamped to unit interval)
+            - z_a          is the latent tensor for stream A
+            - confidence_a ∈ [0, 1]
         """
         pass
 
     @abstractmethod
     def encode_stream_b(self, x_b: Any) -> tuple[Any, float]:
         """
-        V2: Encode Stream B into a latent representation.
+        V1 (Stream Independence): Encode Stream B into a latent representation.
+
+        This method must share no mutable state with encode_stream_a across
+        calls. The two encoding paths are epistemically isolated.
 
         Returns
         -------
         tuple[Any, float]
             (z_b, confidence_b) where:
             - z_b          is the latent tensor for stream B
-            - confidence_b ∈ [0, 1]  (V2 invariant: clamped to unit interval)
+            - confidence_b ∈ [0, 1]
         """
         pass
 
     @abstractmethod
     def divergence(self, z_a: Any, z_b: Any) -> float:
         """
-        V3–V4: Compute the divergence between two stream latents.
+        V2 + V3: Compute divergence between two stream latents.
 
-        Invariant V3: divergence(z_a, z_b) ≥ 0 for all z_a, z_b
-        Invariant V4: divergence(z, z) = 0    for all z  (identity)
+        Invariant V2 (Geometric Divergence): divergence(z_a, z_b) ∈ ℝ≥0 for
+            all z_a, z_b. The result is a non-negative real scalar.
+        Invariant V3 (Symmetry Breaking Allowed): divergence(z_a, z_b) need
+            NOT equal divergence(z_b, z_a). Asymmetric metrics are valid.
 
-        The internal metric is not specified — cosine distance, normalised
-        L2, Jensen–Shannon divergence, or binary prediction disagreement
-        are all compliant provided V3–V4 hold.
+        The internal metric is not specified — cosine distance, normalised L2,
+        KL divergence, Jensen–Shannon divergence, or binary prediction
+        disagreement are all compliant provided V2 holds.
 
         Parameters
         ----------
@@ -1266,7 +1282,7 @@ class AbstractDivergenceRouter(ABC):
         Returns
         -------
         float
-            Non-negative divergence scalar.
+            Non-negative divergence scalar (V2).
         """
         pass
 
@@ -1278,13 +1294,17 @@ class AbstractDivergenceRouter(ABC):
         divergence: float,
     ) -> RouteDecision:
         """
-        V5–V6: Deterministic routing from confidence scalars and divergence only.
+        V4 + V5 + V6: Deterministic content-blind routing.
 
-        Invariant V5: identical (confidence_a, confidence_b, divergence) inputs
-                      always produce identical RouteDecision output.
-        Invariant V6: this method receives ONLY scalars (c_A, c_B, D).
-                      It has no access to z_a or z_b.
-                      The routing decision is blind to stream content.
+        Invariant V4 (Content Blindness): this method receives ONLY scalars
+            (c_A, c_B, D). It has no access to z_a or z_b. Routing is blind
+            to stream content — not a fusion layer in disguise.
+        Invariant V5 (Routing Completeness): returns exactly one member of
+            {Execute, Investigate, Defer, Halt}. Identical inputs always
+            produce identical output.
+        Invariant V6 (Safety-Learning Equivalence): Halt (STRUCTURAL_IMPASSE)
+            is the maximum learning signal, not a failure. Both streams are
+            uncertain — the model is at its knowledge boundary.
 
         Parameters
         ----------
