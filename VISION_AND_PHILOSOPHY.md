@@ -41,7 +41,7 @@ is no "chain-of-thought" that disappears. The audit trail is the execution.
 
 ## The Domain-Agnosticism Thesis
 
-The nine ABCs in `core/interfaces.py` are not biomedical contracts. They are not
+The ten ABCs in `core/interfaces.py` are not biomedical contracts. They are not
 financial contracts. They are not industrial contracts.
 
 They are **cognitive contracts** — mathematical specifications of the operations any
@@ -56,8 +56,11 @@ intelligent system must perform when it:
 7. **Perturbs** — reasons about counterfactuals in latent space without real-world execution (`AbstractPerturbationOperator`)
 8. **Scores and routes** — converts continuous assessments to discrete control decisions (`AbstractRoutingKernel`)
 9. **Gates on entropy** — decides whether a prediction is confident enough to commit (`AbstractEntropicRouter`)
+10. **Routes divergence** — keeps modal streams independent, measures geometric disagreement
+    between streams, and treats high-confidence contradiction as the primary control signal
+    rather than noise to be averaged away (`AbstractDivergenceRouter`, V1–V6)
 
-These nine operations appear in every sufficiently complex cognitive system, regardless
+These ten operations appear in every sufficiently complex cognitive system, regardless
 of domain. The ABC is the isomorphism — the proof that power-grid fault detection, market
 regime routing, atmospheric CO₂ shock prediction, and autonomous vehicle sensor fusion
 are all the same computation wearing different data.
@@ -153,7 +156,7 @@ This is not compliance theatre. This is compliance by construction.
 
 ## The Prior Art Chain
 
-The nine ABCs emerged through an iterative, publicly timestamped research process.
+The ten ABCs emerged through an iterative, publicly timestamped research process.
 Each Zenodo release represents a discrete conceptual contribution:
 
 | Release | ABC contribution |
@@ -163,8 +166,9 @@ Each Zenodo release represents a discrete conceptual contribution:
 | v2.2.0 | `AbstractEntropicRouter`, `RouteDecision` enum |
 | v2.2.3 | `AbstractAttentionKernel` (A1–A6), `AbstractPerturbationOperator` (P1–P6), `AbstractRoutingKernel` (R1–R4), `AbstractModalEncoder` (M1–M3) — all in five domain-agnostic examples |
 | v2.2.4 | All nine ABCs in one file (`powergrid_full_stack.py`) — static proof + two-scenario execution |
+| v2.3.0 | Tenth ABC: `AbstractDivergenceRouter` (V1–V6) — multi-stream divergence routing; Safety-Learning Equivalence. DOI: [10.5281/zenodo.20278781](https://doi.org/10.5281/zenodo.20278781) |
 
-Any system that implements any subset of these nine ABCs and satisfies their invariants
+Any system that implements any subset of these ten ABCs and satisfies their invariants
 is a Derivative Work under Apache 2.0. The prior art is timestamped, DOI-anchored, and
 machine-verifiable.
 

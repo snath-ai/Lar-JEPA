@@ -358,6 +358,73 @@ class AbstractModalEncoder(ABC):
 
 ---
 
+### 10. `AbstractDivergenceRouter`
+
+Multi-stream routing primitive. Arbitrates between two independent latent streams by
+measuring their geometric relationship — never inspecting stream content. Treats
+high-confidence disagreement between streams as the primary control signal rather than
+noise to be averaged away.
+
+Anchored by: [DOI 10.5281/zenodo.20278781](https://doi.org/10.5281/zenodo.20278781) —
+*Divergence Is Not Noise: Multi-Stream Routing Without Modal Fusion and the Safety-Learning Equivalence*
+
+```python
+class AbstractDivergenceRouter(ABC):
+    def encode_stream_a(self, x_a) -> tuple[Any, float]   # V1: (latent, confidence ∈ [0,1])
+    def encode_stream_b(self, x_b) -> tuple[Any, float]   # V2: (latent, confidence ∈ [0,1])
+    def divergence(self, z_a, z_b)  -> float              # V3-V4: ≥ 0; D(z,z)=0
+    def route(self, c_a, c_b, D)    -> RouteDecision      # V5-V6: pure fn of scalars only
+```
+
+**Invariants:**
+- **V1**: `encode_stream_a(x).confidence ∈ [0, 1]`
+- **V2**: `encode_stream_b(x).confidence ∈ [0, 1]`
+- **V3**: `divergence(z_a, z_b) ≥ 0` for all inputs
+- **V4**: `divergence(z, z) = 0` (identity invariant)
+- **V5**: `route(c_a, c_b, D)` is a deterministic pure function — identical inputs always produce identical `RouteDecision`
+- **V6**: `route` receives only scalars `(c_a, c_b, D)` — **blind to stream content**; no access to `z_a` or `z_b`
+
+**Four routing rules:**
+| Rule | Condition | Decision |
+|---|---|---|
+| Execute | Both confident, D < δ | `COMMIT_TRAJECTORY` |
+| Investigate | Both confident, D ≥ δ | `TRIGGER_REPLAN` ← most informative case |
+| Defer | Exactly one confident | `COMMIT_TRAJECTORY` (confident stream only) |
+| Halt | Both uncertain | `STRUCTURAL_IMPASSE` |
+
+The **Investigate** rule is the key contribution: when two independent high-confidence
+streams disagree, the disagreement itself is the signal. Do not fuse. Do not average.
+Investigate.
+
+**Self-curating training curriculum (D_hard):**
+
+When used as training infrastructure, high-divergence routing decisions accumulate as:
+
+```
+D_hard = {i : Δ_i ≥ δ  and  r_i = TRIGGER_REPLAN}
+```
+
+D_hard grows at the model's uncertainty boundary automatically. No human labeling.
+No manually designed curriculum. The routing decisions constitute the curriculum.
+
+**Safety-Learning Equivalence (Theorem, proved in DOI 10.5281/zenodo.20278781):**
+
+The invariants enforcing routing safety (V5 determinism, V6 content-blindness, V1–V4
+confidence range) are identical to the invariants that make the divergence signal a
+valid training curriculum. There is no trade-off between safety and learning — they
+are the same mechanism.
+
+**Domain examples:**
+| Domain | Stream A | Stream B | Disagreement signal |
+|--------|---------|---------|---------------------|
+| Medical imaging | Scan latent (ViT / BioViL) | Clinical report latent (BioBERT) | Report inconsistent with image findings |
+| Vision-Language | Image latent (JEPA) | Text latent (LLM) | Caption contradicts scene |
+| Autonomous vehicles | Sensor latent (LiDAR) | Map / semantic latent | Road state contradicts map |
+| Cybersecurity | Syscall / network latent | Auth / policy latent | Behaviour contradicts permissions |
+| Finance | Price / volume latent | News / sentiment latent | Market contradicts narrative |
+
+---
+
 ### ABC Coverage by Example File
 
 | Example file | ABCs exercised |
@@ -561,7 +628,9 @@ This architecture extends and subsumes the following published prior art:
 | [10.5281/zenodo.19516414](https://doi.org/10.5281/zenodo.19516414) | LARA Integrated Cognitive Environment (ICE) | AbstractEntropicRouter, RouteDecision |
 | [10.5281/zenodo.19646405](https://doi.org/10.5281/zenodo.19646405) | DMN v3.0 — The Dream Loop | memory consolidation, learned graph executor |
 | [v2.2.3 — 2026-05-17](https://github.com/snath-ai/Lar-JEPA/releases/tag/v2.2.3) | Five domain-agnostic ABC example pipelines | AbstractAttentionKernel (A1–A6), AbstractPerturbationOperator (P1–P6), AbstractRoutingKernel (R1–R4), AbstractModalEncoder (M1–M3) across industrial, finance, cybersecurity, climate, AV domains |
-| [v2.2.4 — 2026-05-17](https://github.com/snath-ai/Lar-JEPA/releases/tag/v2.2.4) | `powergrid_full_stack.py` — all 9 ABCs in one file | canonical court-admissible proof: all 9 ABCs imported, subclassed, and executed in two independent scenarios with HMAC-signed audit records |
+| [v2.2.4 — 2026-05-17](https://github.com/snath-ai/Lar-JEPA/releases/tag/v2.2.4) | `powergrid_full_stack.py` — all 9 ABCs in one file | canonical proof: all 9 ABCs imported, subclassed, and executed in two independent scenarios with HMAC-signed audit records |
+| [10.5281/zenodo.20278781](https://doi.org/10.5281/zenodo.20278781) — May 2026 | Divergence Is Not Noise: Multi-Stream Routing Without Modal Fusion and the Safety-Learning Equivalence | `AbstractDivergenceRouter` (V1–V6); four routing rules (Execute, Investigate, Defer, Halt); Safety-Learning Equivalence theorem; self-curating curriculum D_hard |
+| [v2.3.0 — 2026-05-19](https://github.com/snath-ai/Lar-JEPA/releases/tag/v2.3.0) | Tenth ABC: `AbstractDivergenceRouter` added to `core/interfaces.py` | V1–V6 formally specified in codebase; all 10 ABCs exported from `core/__init__.py` |
 
 **Author:** Aadithya Vishnu Sajeev / Snath AI  
 **License:** Apache 2.0

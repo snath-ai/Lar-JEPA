@@ -3,15 +3,53 @@ __pycache__/
 *.pyo
 *.pyd
 .DS_Store
+.venv/
+.env
+.env*
+
+# --- Runtime log directories (all variants) ---
 lar_logs/
 test_logs/
+reasoning_logs/
+clinical_audit_logs/
+financial_audit_logs/
+hmac_compliance_logs/
+custom_test_logs/
+advanced_logs/
+shared_logs/
+infrastructure_logs/
+seismic_logs/
+sample_outputs_hmac/
+
+# --- Runtime audit / compliance outputs ---
+enterprise_audit/
+audit/
+compliance_manifest.json
+generated_code_output.txt
+
+# --- Runtime data and memory ---
 memory/
 data/
-*.ckpt
-*.pt
-.env
-seismic_logs/
-infrastructure_logs/
 lab_reports/
 cache/
-DMN/lar/memory/dreams.json
+chroma_db/
+vector_store*/
+dreams.json
+long_term_insights.json
+lar_time_machine.json
+
+# --- Binary artifacts (models, embeddings, streams) ---
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.pkl
+*.jsonl
+*.idx
+
+# --- Runtime debug output ---
+*stacktrace*
+
+# --- Build artifacts ---
+site/
+dist/

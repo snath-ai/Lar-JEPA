@@ -1103,3 +1103,201 @@ class AbstractModalEncoder(ABC):
             Latent vector z ∈ ℝ^(B × output_dim).
         """
         pass
+
+
+# ---------------------------------------------------------------------------
+
+class AbstractDivergenceRouter(ABC):
+    """
+    Tenth cognitive ABC in the Lár-JEPA cognitive contract.
+
+    Multi-stream routing primitive. Arbitrates between two independent latent
+    streams by measuring their geometric relationship. Does not inspect stream
+    content — only confidence scores and divergence between predictions.
+
+    This is the formal specification of the divergence-gated architecture
+    introduced in the companion paper. The internal mechanism for computing
+    confidence and divergence is not specified by this ABC — any function
+    satisfying invariants V1–V6 is compliant.
+
+    Mathematical Specification
+    --------------------------
+    Given two independent stream encoders A and B:
+
+        z_A, c_A = encode_stream_a(x_A)
+        z_B, c_B = encode_stream_b(x_B)
+        D        = divergence(z_A, z_B)
+        decision = route(c_A, c_B, D)
+
+    Invariant properties (V1–V6):
+        V1. encode_stream_a(x).confidence ∈ [0, 1]
+        V2. encode_stream_b(x).confidence ∈ [0, 1]
+        V3. divergence(z_A, z_B) ≥ 0  for all z_A, z_B
+        V4. divergence(z, z) = 0       for all z  (identity invariant)
+        V5. route(c_A, c_B, D) is a deterministic pure function —
+            identical inputs always produce identical RouteDecision
+        V6. route receives only scalars (c_A, c_B, D) — it has no access
+            to z_A or z_B; the routing decision is blind to stream content
+
+    V6 is the most important invariant. A route() function that inspects
+    stream content is a fusion layer in disguise — it becomes a third model
+    that blends the two streams before making a decision. V6 enforces the
+    architectural boundary: the RouterNode reads the room, not the case.
+
+    Four Routing Rules
+    ------------------
+    The route() method is specified by four deterministic rules over
+    thresholds τ_high, τ_low, and δ:
+
+        Execute:     c_A ≥ τ_h, c_B ≥ τ_h, D < δ
+                     → COMMIT_TRAJECTORY  (both agree)
+
+        Investigate: c_A ≥ τ_h, c_B ≥ τ_h, D ≥ δ
+                     → TRIGGER_REPLAN     (both confident, disagree — most
+                                           informative case; do not fuse)
+
+        Defer:       exactly one of c_A, c_B ≥ τ_h
+                     → COMMIT_TRAJECTORY  (defer to confident stream)
+
+        Halt:        c_A < τ_l, c_B < τ_l
+                     → STRUCTURAL_IMPASSE (both uncertain; no reliable signal)
+
+    Relationship to Existing ABCs
+    ------------------------------
+    AbstractDivergenceRouter is a specialisation of AbstractRoutingKernel
+    (R1–R4) in the multi-stream case: the "candidate next states" are the
+    outputs of two independent latent encoders, and the scoring function is
+    the content-blind divergence gate defined by V1–V6.
+
+    Both stream encoders satisfy AbstractModalEncoder (M1–M3). Stream
+    independence is enforced by the AbstractContextBridge contract (pure
+    function, no side effects between streams).
+
+    Domain Instantiations (non-exhaustive)
+    ----------------------------------------
+        Vision-Language:
+            stream_a = image latent (JEPA encoder)
+            stream_b = text latent  (language encoder)
+            signal   = caption contradicts scene
+
+        Medical imaging:
+            stream_a = scan latent  (radiology image encoder)
+            stream_b = report latent (clinical notes encoder)
+            signal   = report inconsistent with image findings
+
+        Autonomous vehicles:
+            stream_a = sensor latent (LiDAR / camera)
+            stream_b = map / semantic latent
+            signal   = road state contradicts map
+
+        Cybersecurity:
+            stream_a = syscall / network behaviour latent
+            stream_b = auth / policy latent
+            signal   = behaviour contradicts declared permissions
+
+    Self-Curating Training Curriculum
+    -----------------------------------
+    When used as training infrastructure (Lár as Training Infrastructure),
+    high-divergence cases are accumulated as D_hard:
+
+        D_hard = {i : Δ_i ≥ δ and r_i = TRIGGER_REPLAN}
+
+    D_hard grows automatically at the model's uncertainty boundary.
+    No human labeling required. No manually designed curriculum.
+    The routing decisions themselves constitute the curriculum.
+
+    Authorship and prior art timestamp
+    ------------------------------------
+    Specified by: Aadithya Vishnu Sajeev
+    First published: May 2026.
+    Repository: github.com/snath-ai/Lar-JEPA (Apache 2.0)
+    Anchored by: Zenodo DOI 10.5281/zenodo.20278781
+                 (Divergence Is Not Noise: Multi-Stream Routing Without
+                  Modal Fusion and the Safety-Learning Equivalence)
+    """
+
+    @abstractmethod
+    def encode_stream_a(self, x_a: Any) -> tuple[Any, float]:
+        """
+        V1: Encode Stream A into a latent representation.
+
+        Returns
+        -------
+        tuple[Any, float]
+            (z_a, confidence_a) where:
+            - z_a        is the latent tensor for stream A
+            - confidence_a ∈ [0, 1]  (V1 invariant: clamped to unit interval)
+        """
+        pass
+
+    @abstractmethod
+    def encode_stream_b(self, x_b: Any) -> tuple[Any, float]:
+        """
+        V2: Encode Stream B into a latent representation.
+
+        Returns
+        -------
+        tuple[Any, float]
+            (z_b, confidence_b) where:
+            - z_b          is the latent tensor for stream B
+            - confidence_b ∈ [0, 1]  (V2 invariant: clamped to unit interval)
+        """
+        pass
+
+    @abstractmethod
+    def divergence(self, z_a: Any, z_b: Any) -> float:
+        """
+        V3–V4: Compute the divergence between two stream latents.
+
+        Invariant V3: divergence(z_a, z_b) ≥ 0 for all z_a, z_b
+        Invariant V4: divergence(z, z) = 0    for all z  (identity)
+
+        The internal metric is not specified — cosine distance, normalised
+        L2, Jensen–Shannon divergence, or binary prediction disagreement
+        are all compliant provided V3–V4 hold.
+
+        Parameters
+        ----------
+        z_a : Any
+            Latent tensor from encode_stream_a.
+        z_b : Any
+            Latent tensor from encode_stream_b.
+
+        Returns
+        -------
+        float
+            Non-negative divergence scalar.
+        """
+        pass
+
+    @abstractmethod
+    def route(
+        self,
+        confidence_a: float,
+        confidence_b: float,
+        divergence: float,
+    ) -> RouteDecision:
+        """
+        V5–V6: Deterministic routing from confidence scalars and divergence only.
+
+        Invariant V5: identical (confidence_a, confidence_b, divergence) inputs
+                      always produce identical RouteDecision output.
+        Invariant V6: this method receives ONLY scalars (c_A, c_B, D).
+                      It has no access to z_a or z_b.
+                      The routing decision is blind to stream content.
+
+        Parameters
+        ----------
+        confidence_a : float
+            Confidence score from encode_stream_a. Must be in [0, 1].
+        confidence_b : float
+            Confidence score from encode_stream_b. Must be in [0, 1].
+        divergence : float
+            Divergence scalar from divergence(). Must be ≥ 0.
+
+        Returns
+        -------
+        RouteDecision
+            One of COMMIT_TRAJECTORY, TRIGGER_REPLAN, STRUCTURAL_IMPASSE.
+        """
+        pass

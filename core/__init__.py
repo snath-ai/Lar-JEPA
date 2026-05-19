@@ -3,6 +3,12 @@ from .interfaces import (
     AbstractManifold,
     AbstractContextBridge,
     AbstractEntropicRouter,
+    AbstractLatentFaultLocator,
+    AbstractAttentionKernel,
+    AbstractPerturbationOperator,
+    AbstractRoutingKernel,
+    AbstractModalEncoder,
+    AbstractDivergenceRouter,
 )
 from .types import (
     RouteDecision,
@@ -14,11 +20,17 @@ from .types import (
 from .adapter import CognitiveNodeAdapter
 
 __all__ = [
-    # Interfaces
+    # Interfaces — Ten-ABC cognitive contract
     "AbstractCognitiveNode",
     "AbstractManifold",
     "AbstractContextBridge",
     "AbstractEntropicRouter",
+    "AbstractLatentFaultLocator",
+    "AbstractAttentionKernel",
+    "AbstractPerturbationOperator",
+    "AbstractRoutingKernel",
+    "AbstractModalEncoder",
+    "AbstractDivergenceRouter",    # tenth ABC — DOI: 10.5281/zenodo.20278781
     # Adapter
     "CognitiveNodeAdapter",
     # Types
