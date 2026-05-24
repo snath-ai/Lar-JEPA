@@ -361,6 +361,24 @@ pytest lar_jepa/tests/unit/ -v
 
 ---
 
+## Empirical Results — AbstractDivergenceRouter (V1–V6)
+
+The `AbstractDivergenceRouter` (tenth ABC, v2.3.0) was empirically validated across two structurally unrelated domains in:
+
+> **Divergence Is Not Noise: Multi-Stream Routing Without Modal Fusion and the Safety-Learning Equivalence**
+> Aadithya Vishnu Sajeev — DOI: [10.5281/zenodo.20278781](https://doi.org/10.5281/zenodo.20278781)
+
+| Domain | Model | Result |
+|:-------|:------|:-------|
+| Medical imaging (NLM Indiana CXR) | BiomedCLIP | Routing AUROC **0.87** vs Fusion **0.85** — same backbone, same data, scoring function only. TRIGGER_REPLAN lift **6.5×**. Mean-D lift **3.11×** vs fusion's 1.08×. |
+| General vision-language (MSCOCO) | OpenCLIP ViT-B-32 | Under oracle that equalises fusion's CLS signal: Routing AUROC **0.72** (lift 1.51×, p = 5.7×10⁻⁵) vs Fusion AUROC **0.51** (lift 1.00× — completely blinded). |
+
+Raw result data for all experiments referenced in the paper — including the full experimental progression (design failures F1–F4 and their fixes), Tier-1 ablations (vocabulary size, calibrated comparison, Δ-space geometry) — are in [`experiments/results/`](experiments/results/).
+
+Each JSON file is a self-contained record: model config, calibration thresholds, per-sample decisions, aggregate statistics. All paper figures are reproducible directly from these files.
+
+---
+
 ## License
 
 Apache 2.0. Built on the [Lár Engine](https://github.com/snath-ai/lar). See `ARCHITECTURE.md` for the full nervous system design.

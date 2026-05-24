@@ -1,0 +1,92 @@
+
+======================================================================
+  DAS Tier 1 Experiments — Directions 11, 12, 13
+  Device: mps   |   Fast mode: False
+======================================================================
+
+[data] Loading NLM CXR dataset...
+Loaded 3826 paired image-report samples.
+[data] 3826 paired samples
+
+[oracle] Loading TXV DenseNet-121 (GT construction only)...
+[GT oracle] TXV predictions for 800 samples...
+  100/800
+  200/800
+  300/800
+  400/800
+  500/800
+  600/800
+  700/800
+  800/800
+[GT oracle] Valid: 800  matrix: (800, 18)
+[GT oracle] 100 normal + 100 contra pairs
+  Mean TXV L1 (oracle selection): 8.383
+
+[split] Cal: 100  Test: 100
+[split] y=1 (contradiction): 100 / 200
+
+[model] Loading BiomedCLIP...
+[model] BiomedCLIP loaded.
+
+[encoding] 200 pairs (image + text)...
+  encoded 50/200
+  encoded 100/200
+  encoded 150/200
+  encoded 200/200
+[encoding] img_cls: torch.Size([200, 512])  txt_cls: torch.Size([200, 512])
+
+[cache] Saved CLS embeddings to /Users/aadithya/Desktop/Private/personal/Snath/JEPA_Playground/Experiments/lar_divergence_exp/data/tier1_cache.pt
+[finding_vecs] Computing K=18 finding vectors...
+  v_A18: torch.Size([200, 18])  v_B18: torch.Size([200, 18])
+
+
+────────────────────────────────────────────────────────────
+DIRECTION 12 — Calibrated Fusion Baseline
+────────────────────────────────────────────────────────────
+  Routing calib: AUROC=0.8248  δ=0.3472  ba=0.880
+  Fusion  calib: AUROC=0.8580  δ=0.6097  ba=0.850
+
+  Test set: N=100  pos=50
+  Routing AUROC: 0.7228  acc=0.820
+  Fusion  AUROC: 0.7712  acc=0.720
+  ΔAUROC (routing − fusion): -0.0484
+  Routing D — normal: 0.2473  contra: 0.4149  lift: 1.68×
+  Fusion  D — normal: 0.6063  contra: 0.6545  lift: 1.08×
+
+────────────────────────────────────────────────────────────
+DIRECTION 11 — Vocabulary Size Ablation
+────────────────────────────────────────────────────────────
+
+  K= 5  (atelectasis, cardiomegaly, ...)
+    δ_calib=0.3865  bal_acc_cal=0.900
+    AUROC_test=0.7696  acc_test=0.800
+
+  K= 9  (atelectasis, cardiomegaly, ...)
+    δ_calib=0.3452  bal_acc_cal=0.890
+    AUROC_test=0.7552  acc_test=0.810
+
+  K=18  (atelectasis, consolidation, ...)
+    δ_calib=0.3472  bal_acc_cal=0.880
+    AUROC_test=0.7228  acc_test=0.820
+
+  K=36  (atelectasis, consolidation, ...)
+    δ_calib=0.3568  bal_acc_cal=0.890
+    AUROC_test=0.7624  acc_test=0.820
+
+  Trend ([5, 9, 18, 36]): non_monotone
+    K= 5: AUROC = 0.7696
+    K= 9: AUROC = 0.7552
+    K=18: AUROC = 0.7228
+    K=36: AUROC = 0.7624
+
+────────────────────────────────────────────────────────────
+DIRECTION 13 — Geometry of Δ-Space
+────────────────────────────────────────────────────────────
+  D_hard (TRIGGER_REPLAN, δ=0.3472): 122/200
+  Δ-space shape: (122, 18)
+  GT positive rate in D_hard: 0.787  (overall: 0.500)
+  Enrichment: 1.57×
+  k=3: silhouette=0.6590
+  k=4: silhouette=0.6105
+  k=5: silhouette=0.6109
+[mutex.cc : 452] RAW: Lock blocking 0xc824b53f8   @
