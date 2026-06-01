@@ -223,8 +223,30 @@ class FutureFoundationModel(AbstractCognitiveNode):
     def encode(self, signal): ...   # whatever the architecture produces
 
 # Heterogeneous ensemble — mixed model types, single BatchNode
-BatchNode([GPT4Node(), MambaNode(), CrystalJEPANode(), FutureFoundationModel()])
-→ ReduceNode(strategy="confidence_weighted")
+# All four run concurrently; each writes its output key to state
+batch = BatchNode([GPT4Node(), MambaNode(), CrystalJEPANode(), FutureFoundationModel()])
+
+# Option A — LLM-based synthesis (ReduceNode actual signature)
+reduce = ReduceNode(
+    model_name="ollama/llama3",
+    prompt_template="Synthesize these model outputs into a single decision:\n"
+                    "LLM: {gpt4_result}\nSSM: {mamba_result}\n"
+                    "JEPA: {jepa_result}\nFoundation: {future_result}",
+    input_keys=["gpt4_result", "mamba_result", "jepa_result", "future_result"],
+    output_key="ensemble_decision",
+)
+batch.next_node = reduce
+
+# Option B — Programmatic confidence-weighted merge (no LLM call)
+from lar import node
+
+@node(output_key="ensemble_decision")
+def confidence_weighted_reduce(state):
+    keys = ["gpt4_result", "mamba_result", "jepa_result", "future_result"]
+    pairs = [(state.get(k), state.get(f"{k}_confidence", 1.0)) for k in keys]
+    pairs = [(v, c) for v, c in pairs if v is not None]
+    total = sum(c for _, c in pairs)
+    return sum(v * c / total for v, c in pairs)
 ```
 
 The `AbstractRoutingKernel` extends this to routing *decisions* — not just model execution. Any routing mechanism (threshold, RL policy, Bayesian posterior, ensemble vote, uncertainty estimate) satisfies `score() → float, route() → str` and plugs into the graph without modification. A routing kernel trained in 2028 on a dataset that doesn't exist yet is a valid `AbstractRoutingKernel` today.

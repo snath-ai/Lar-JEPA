@@ -153,11 +153,14 @@ class JEPA_DMN_Consolidation_Node:
             if embedding:
                 self._hippocampus.save_memory(summary, embedding, metadata)
             else:
-                generated_embedding = self._hippocampus._generate_embedding(summary)
+                # Use public method if available, fallback to protected for backwards compatibility
+                gen_fn = getattr(self._hippocampus, "generate_embedding", getattr(self._hippocampus, "_generate_embedding", None))
+                generated_embedding = gen_fn(summary) if gen_fn else None
                 if generated_embedding:
                     self._hippocampus.save_memory(summary, generated_embedding, metadata)
                 else:
-                    self._hippocampus.save_memory(summary, [], metadata)
+                    print("⚠️  [JEPA→DMN] Embedding generation failed. Skipping memory save to avoid ChromaDB dimension mismatch.")
+                    return False
             return True
         except Exception as e:
             print(f"❌ [JEPA→DMN] write_trajectory_heuristic failed: {e}")
