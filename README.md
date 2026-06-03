@@ -42,6 +42,25 @@ The industry is building the Brain (LLMs, JEPAs). We are building the Nervous Sy
 
 ---
 
+## Production Instantiations
+
+The V1–V6 routing contract is domain-agnostic: the same routing core, temporal-decay
+gate `W = exp(−λ · Δt)`, and System 1 / System 2 adapter pipeline run unmodified across
+unrelated fields. Only the λ constants and failure-class labels change. Each repository
+below is an independent, open-source instantiation built on Lár-JEPA:
+
+| Repository | Domain | Stream A | Stream B | Failure classes |
+| :--- | :--- | :--- | :--- | :--- |
+| **[Snath Basis](https://github.com/snath-ai/snath-basis)** | Quantitative finance | Fundamental analysis | Market signals | `market_regime` / `structural` |
+| **[Snath Aviation](https://github.com/snath-ai/snath-aviation)** | Aviation sensor routing | Radar | Pitot tube | `weather_induced` / `hardware_struct` |
+| **[Snath Robotics](https://github.com/snath-ai/snath-robotics)** | Humanoid sensor routing | Vision | Proprioception | `environmental_transient` / `hardware_structural` |
+
+This is the empirical claim of universal cognitive routing made concrete: the same
+mathematical spine governs financial markets, aviation safety, and humanoid robotics
+without modification to any Lár-JEPA primitive.
+
+---
+
 ## The Problem
 
 LLM agents hallucinate because their "memory" is a linear string of text. When step 3 of a 50-step plan goes wrong, the entire execution is doomed — the model has no internal model of physics, spatial logic, or long-term consequence. It predicts the next token.
@@ -392,7 +411,7 @@ The `AbstractDivergenceRouter` (tenth ABC, v2.3.0) was empirically validated acr
 
 | Domain | Model | Result |
 |:-------|:------|:-------|
-| Medical imaging (NLM Indiana CXR) | BiomedCLIP | Routing AUROC **0.87** vs Fusion **0.85** — same backbone, same data, scoring function only. TRIGGER_REPLAN lift **6.5×**. Mean-D lift **3.11×** vs fusion's 1.08×. |
+| Medical imaging (NLM Indiana CXR) | BiomedCLIP | Mean-D lift **3.11×** vs fusion's **1.08×** — same backbone, same data, scoring function only (the primary signal). TRIGGER_REPLAN lift **6.5×**. Routing AUROC 0.87 vs Fusion 0.85; the two-point gap is within CI noise at N_test = 100 and is not the claim. |
 | General vision-language (MSCOCO) | OpenCLIP ViT-B-32 | Under oracle that equalises fusion's CLS signal: Routing AUROC **0.72** (lift 1.51×, p = 5.7×10⁻⁵) vs Fusion AUROC **0.51** (lift 1.00× — completely blinded). |
 
 Raw result data for all experiments referenced in the paper — including the full experimental progression (design failures F1–F4 and their fixes), Tier-1 ablations (vocabulary size, calibrated comparison, Δ-space geometry) — are in [`experiments/results/`](experiments/results/).
