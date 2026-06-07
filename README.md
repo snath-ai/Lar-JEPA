@@ -59,6 +59,17 @@ This is the empirical claim of universal cognitive routing made concrete: the sa
 mathematical spine governs financial markets, aviation safety, and humanoid robotics
 without modification to any Lár-JEPA primitive.
 
+### Research Publications
+
+The formal proofs behind this architecture are published open-access through
+**[Snath Research](https://github.com/snath-ai/snath-research)**:
+
+| Paper | Short name | DOI | Proves |
+| :--- | :--- | :--- | :--- |
+| Divergence Is Not Noise | **DAS** | [10.5281/zenodo.20278781](https://doi.org/10.5281/zenodo.20278781) | The routing signal detects hard cases better than fusion |
+| Universal Cognitive Routing | **UCR** | [10.5281/zenodo.20278775](https://doi.org/10.5281/zenodo.20278775) | The V1–V6 contract is domain-universal across 7 verticals |
+| The Lár Training Loop | **LTL** | [10.5281/zenodo.20581128](https://doi.org/10.5281/zenodo.20581128) | Routing flags are gradient signals — annotation-free continual learning |
+
 ---
 
 ## The Problem
@@ -417,6 +428,30 @@ The `AbstractDivergenceRouter` (tenth ABC, v2.3.0) was empirically validated acr
 Raw result data for all experiments referenced in the paper — including the full experimental progression (design failures F1–F4 and their fixes), Tier-1 ablations (vocabulary size, calibrated comparison, Δ-space geometry) — are in [`experiments/results/`](experiments/results/).
 
 Each JSON file is a self-contained record: model config, calibration thresholds, per-sample decisions, aggregate statistics. All paper figures are reproducible directly from these files.
+
+---
+
+## Empirical Results — Lár Training Loop (LTL)
+
+The annotation-free continual-learning proof is in:
+
+> **The Lár Training Loop: Routing Flags as Gradient Signals**
+> Aadithya Vishnu Sajeev — DOI: [10.5281/zenodo.20581128](https://doi.org/10.5281/zenodo.20581128)
+
+All experiment scripts and raw results live in the **[snath-robotics](https://github.com/snath-ai/snath-robotics)** repository under `experiments/`:
+
+| Script | Claim | Result |
+|:-------|:------|:-------|
+| [`prove_learning.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_learning.py) | Disagreement is a valid curriculum signal | JEPA AUROC **0.45 → 0.94** label-free |
+| [`ablation_proof.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/ablation_proof.py) | Robust to noise and small training sets | Holds at σ = 0.25, N = 25 |
+| [`prove_transfer.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_transfer.py) | Detection transfers across sessions | AUROC drop **0.018** across sessions |
+| [`prove_transfer.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_transfer.py) | LoRA adapter corrects unseen instances | Δcos = **+0.15** on never-seen instances |
+| [`prove_policy.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_policy.py) | Policy memory — safe speed found label-free | gap = 0.68 |
+| [`prove_policy.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_policy.py) | Prior accelerates exploration on new surfaces | **6.5× fewer steps** |
+| [`coco_proof.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/coco_proof.py) | Generalises to real CLIP ViT-B/32 embeddings | AUROC **0.9997** on 5 000 COCO pairs |
+
+Raw JSON results are in [`experiments/coco_results/`](https://github.com/snath-ai/snath-robotics/tree/main/experiments/coco_results).
+Every result is reproducible on a consumer laptop (Apple Silicon MPS / CPU) — no external GPU required.
 
 ---
 
