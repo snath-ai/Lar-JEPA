@@ -413,32 +413,48 @@ pytest lar_jepa/tests/unit/ -v
 
 ---
 
-## Empirical Results — AbstractDivergenceRouter (V1–V6)
+## Empirical Results
 
-The `AbstractDivergenceRouter` (tenth ABC, v2.3.0) was empirically validated across two structurally unrelated domains in:
-
-> **Divergence Is Not Noise: Multi-Stream Routing Without Modal Fusion and the Safety-Learning Equivalence**
-> Aadithya Vishnu Sajeev — DOI: [10.5281/zenodo.20278781](https://doi.org/10.5281/zenodo.20278781)
-
-| Domain | Model | Result |
-|:-------|:------|:-------|
-| Medical imaging (NLM Indiana CXR) | BiomedCLIP | Mean-D lift **3.11×** vs fusion's **1.08×** — same backbone, same data, scoring function only (the primary signal). TRIGGER_REPLAN lift **6.5×**. Routing AUROC 0.87 vs Fusion 0.85; the two-point gap is within CI noise at N_test = 100 and is not the claim. |
-| General vision-language (MSCOCO) | OpenCLIP ViT-B-32 | Under oracle that equalises fusion's CLS signal: Routing AUROC **0.72** (lift 1.51×, p = 5.7×10⁻⁵) vs Fusion AUROC **0.51** (lift 1.00× — completely blinded). |
-
-Raw result data for all experiments referenced in the paper — including the full experimental progression (design failures F1–F4 and their fixes), Tier-1 ablations (vocabulary size, calibrated comparison, Δ-space geometry) — are in [`experiments/results/`](experiments/results/).
-
-Each JSON file is a self-contained record: model config, calibration thresholds, per-sample decisions, aggregate statistics. All paper figures are reproducible directly from these files.
+All experiments across the three-paper series are linked here by paper and repository.
 
 ---
 
-## Empirical Results — Lár Training Loop (LTL)
+### DAS — Divergence Is Not Noise
 
-The annotation-free continual-learning proof is in:
+> DOI: [10.5281/zenodo.20278781](https://doi.org/10.5281/zenodo.20278781) · scripts and results in **this repository**
 
-> **The Lár Training Loop: Routing Flags as Gradient Signals**
-> Aadithya Vishnu Sajeev — DOI: [10.5281/zenodo.20581128](https://doi.org/10.5281/zenodo.20581128)
+| Script | Domain | Result |
+|:-------|:-------|:-------|
+| [`examples/medical_imaging_divergence_router.py`](examples/medical_imaging_divergence_router.py) | Medical imaging (NLM Indiana CXR, BiomedCLIP) | Mean-D lift **3.11×** vs fusion **1.08×**; AUROC **0.87** |
+| [`examples/medical_imaging_divergence_router.py`](examples/medical_imaging_divergence_router.py) | Vision-language (MSCOCO, OpenCLIP ViT-B-32) | Routing AUROC **0.72** (lift 1.51×, p = 5.7×10⁻⁵) vs Fusion **0.51** |
 
-Experiment scripts and raw results are split across two repositories by domain:
+Raw results (full design-failure progression F1–F4, Tier-1 ablations): [`experiments/results/`](experiments/results/)
+
+Each JSON is a self-contained record: model config, calibration thresholds, per-sample decisions, aggregate statistics.
+
+---
+
+### UCR — Universal Cognitive Routing
+
+> DOI: [10.5281/zenodo.20278775](https://doi.org/10.5281/zenodo.20278775) · machine-verifiable integration test in **this repository**
+
+The V1–V6 routing contract was validated across 8 executable instantiations in 7 verticals. Each example in [`examples/`](examples/) is an independent instantiation of the same contract:
+
+| Script | Domain |
+|:-------|:-------|
+| [`examples/medical_imaging_divergence_router.py`](examples/medical_imaging_divergence_router.py) | Biomedical |
+| [`examples/finance_divergence_router.py`](examples/finance_divergence_router.py) | Quantitative finance |
+| [`examples/av_sensor_fusion.py`](examples/av_sensor_fusion.py) | Autonomous vehicles |
+| [`examples/cybersecurity_intrusion_detector.py`](examples/cybersecurity_intrusion_detector.py) | Cybersecurity |
+| [`examples/climate_perturbation_model.py`](examples/climate_perturbation_model.py) | Climate science |
+| [`examples/powergrid_full_stack.py`](examples/powergrid_full_stack.py) | Power grid |
+| [`examples/industrial_predictive_maintenance.py`](examples/industrial_predictive_maintenance.py) | Industrial |
+
+---
+
+### LTL — The Lár Training Loop
+
+> DOI: [10.5281/zenodo.20581128](https://doi.org/10.5281/zenodo.20581128) · scripts split across two domain repositories
 
 **Robotics sensor-fusion proofs — [snath-robotics/experiments/](https://github.com/snath-ai/snath-robotics/tree/main/experiments)**
 
