@@ -438,19 +438,29 @@ The annotation-free continual-learning proof is in:
 > **The Lár Training Loop: Routing Flags as Gradient Signals**
 > Aadithya Vishnu Sajeev — DOI: [10.5281/zenodo.20581128](https://doi.org/10.5281/zenodo.20581128)
 
-All experiment scripts and raw results live in the **[snath-robotics](https://github.com/snath-ai/snath-robotics)** repository under `experiments/`:
+Experiment scripts and raw results are split across two repositories by domain:
+
+**Robotics sensor-fusion proofs — [snath-robotics/experiments/](https://github.com/snath-ai/snath-robotics/tree/main/experiments)**
 
 | Script | Claim | Result |
 |:-------|:------|:-------|
 | [`prove_learning.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_learning.py) | Disagreement is a valid curriculum signal | JEPA AUROC **0.45 → 0.94** label-free |
 | [`ablation_proof.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/ablation_proof.py) | Robust to noise and small training sets | Holds at σ = 0.25, N = 25 |
-| [`prove_transfer.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_transfer.py) | Detection transfers across sessions | AUROC drop **0.018** across sessions |
-| [`prove_transfer.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_transfer.py) | LoRA adapter corrects unseen instances | Δcos = **+0.15** on never-seen instances |
+| [`prove_transfer.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_transfer.py) | Detection transfers across sessions | AUROC drop **0.018** |
+| [`prove_transfer.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_transfer.py) | LoRA adapter corrects unseen instances | Δcos = **+0.15** |
 | [`prove_policy.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_policy.py) | Policy memory — safe speed found label-free | gap = 0.68 |
 | [`prove_policy.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/prove_policy.py) | Prior accelerates exploration on new surfaces | **6.5× fewer steps** |
 | [`coco_proof.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/coco_proof.py) | Generalises to real CLIP ViT-B/32 embeddings | AUROC **0.9997** on 5 000 COCO pairs |
+| [`curriculum_proof.py`](https://github.com/snath-ai/snath-robotics/blob/main/experiments/curriculum_proof.py) | Threshold sensitivity (Appendix B) | 93.8% of full-data AUROC at D ≥ 0.25 |
 
-Raw JSON results are in [`experiments/coco_results/`](https://github.com/snath-ai/snath-robotics/tree/main/experiments/coco_results).
+Raw JSON results: [`experiments/coco_results/`](https://github.com/snath-ai/snath-robotics/tree/main/experiments/coco_results)
+
+**Cross-domain pilot (peer review) — [snath-research/experiments/](https://github.com/snath-ai/snath-research/tree/main/experiments)**
+
+| Script | Claim | Result |
+|:-------|:------|:-------|
+| [`run_experiment.py`](https://github.com/snath-ai/snath-research/blob/main/experiments/run_experiment.py) | Routing signal generalises to scientific peer review | ICLR 2024, N = 398, SciBERT; SIGReg isotropy ρ = 1.005 |
+
 Every result is reproducible on a consumer laptop (Apple Silicon MPS / CPU) — no external GPU required.
 
 ---
