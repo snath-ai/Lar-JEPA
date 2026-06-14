@@ -1118,7 +1118,7 @@ class AbstractDivergenceRouter(ABC):
     This is the formal specification of the divergence-gated architecture
     introduced in the companion paper. The internal mechanism for computing
     confidence and divergence is not specified by this ABC — any function
-    satisfying invariants V1–V6 is compliant.
+    satisfying invariants V1–V7 is compliant.
 
     Mathematical Specification
     --------------------------
@@ -1129,7 +1129,7 @@ class AbstractDivergenceRouter(ABC):
         D        = divergence(z_A, z_B)
         decision = route(c_A, c_B, D)
 
-    Invariant properties (V1–V6):
+    Invariant properties (V1–V7):
         V1. Stream Independence: encode_stream_a and encode_stream_b must
             never share mutable state across calls. The two encoding paths
             are epistemically isolated — neither influences the other.
@@ -1146,11 +1146,31 @@ class AbstractDivergenceRouter(ABC):
             STRUCTURAL_IMPASSE is the model's knowledge boundary — the most
             valuable training case, not a failure. Contradiction is
             information.
+        V7. Difficulty Invariance (Encoder Invariance): The D_hard curriculum
+            produced by V6 routing is world-grounded. The geometric signature
+            of a high-divergence failure class persists across encoder
+            upgrades — difficulty is a property of the input, not of the
+            encoder version. An input that is D_hard under encoder generation
+            t remains D_hard under generation t+1 (up to threshold rescaling).
+            Proved in: DOI 10.5281/zenodo.20614051
+            (The Encoder Is Not the Memory, Sajeev 2026).
+            Architectural consequence: the adapter router's centroid-match
+            step (System 1) must not apply a temporal trust gate — failure-
+            class geometry is durable regardless of when the adapter was
+            trained or which encoder version produced the stored centroids.
 
-    V4 is the most important invariant. A route() function that inspects
-    stream content is a fusion layer in disguise — it becomes a third model
-    that blends the two streams before making a decision. V4 enforces the
-    architectural boundary: the RouterNode reads the room, not the case.
+    V4 is the most important routing invariant. A route() function that
+    inspects stream content is a fusion layer in disguise — it becomes a
+    third model that blends the two streams before making a decision. V4
+    enforces the architectural boundary: the RouterNode reads the room,
+    not the case.
+
+    V7 is the most important memory invariant. It guarantees the D_hard
+    curriculum remains valid after encoder upgrades — adapter libraries do
+    not need to be rebuilt when model weights improve. The architectural
+    consequence is that adapter centroid matching (System 1) must never
+    apply a temporal trust gate; only LoRA correction (System 2) is
+    perishable.
 
     Four Routing Rules
     ------------------
@@ -1175,7 +1195,7 @@ class AbstractDivergenceRouter(ABC):
     AbstractDivergenceRouter is a specialisation of AbstractRoutingKernel
     (R1–R4) in the multi-stream case: the "candidate next states" are the
     outputs of two independent latent encoders, and the scoring function is
-    the content-blind divergence gate defined by V1–V6.
+    the content-blind divergence gate defined by V1–V7.
 
     Both stream encoders satisfy AbstractModalEncoder (M1–M3). Stream
     independence is enforced by the AbstractContextBridge contract (pure
