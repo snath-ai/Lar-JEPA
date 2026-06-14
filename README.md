@@ -11,8 +11,8 @@
   <a href="https://github.com/snath-ai/Lar-JEPA">
     <img alt="Architecture" src="https://img.shields.io/badge/Architecture-Predictive%20World%20Models-blueviolet?style=for-the-badge">
   </a>
-  <a href="https://github.com/snath-ai/Lar-JEPA/releases/tag/v2.2.3">
-    <img alt="Release" src="https://img.shields.io/badge/Release-v2.2.3-green?style=for-the-badge">
+  <a href="https://github.com/snath-ai/Lar-JEPA/releases/tag/v2.3.1">
+    <img alt="Release" src="https://img.shields.io/badge/Release-v2.3.1-green?style=for-the-badge">
   </a>
 </p>
 
@@ -67,8 +67,9 @@ The formal proofs behind this architecture are published open-access through
 | Paper | Short name | DOI | Proves |
 | :--- | :--- | :--- | :--- |
 | Divergence Is Not Noise | **DAS** | [10.5281/zenodo.20278781](https://doi.org/10.5281/zenodo.20278781) | The routing signal detects hard cases better than fusion |
-| Universal Cognitive Routing | **UCR** | [10.5281/zenodo.20278775](https://doi.org/10.5281/zenodo.20278775) | The V1–V6 contract is domain-universal across 7 verticals |
+| Universal Cognitive Routing | **UCR** | [10.5281/zenodo.20278775](https://doi.org/10.5281/zenodo.20278775) | The V1–V7 contract is domain-universal across 7 verticals |
 | The Lár Training Loop | **LTL** | [10.5281/zenodo.20581128](https://doi.org/10.5281/zenodo.20581128) | Routing flags are gradient signals — annotation-free continual learning |
+| The Encoder Is Not the Memory | **EIM** | [10.5281/zenodo.20614051](https://doi.org/10.5281/zenodo.20614051) | V7 (Difficulty Invariance): D_hard geometry persists across encoder upgrades |
 
 ---
 
@@ -195,7 +196,7 @@ Six standalone pipelines demonstrating that the Lár ABC suite applies across st
 | `cybersecurity_intrusion_detector.py` | Enterprise network security | ModalEncoder, AttentionKernel, PerturbationOperator, RoutingKernel | Lateral movement → QUARANTINE / ESCALATE / MONITOR |
 | `climate_perturbation_model.py` | Earth-systems / climate | ModalEncoder, AttentionKernel, PerturbationOperator, RoutingKernel | CO₂ forcing shock → GLOBAL / REGIONAL / ARCHIVE |
 | `av_sensor_fusion.py` | Autonomous vehicle perception | ModalEncoder ×2, AttentionKernel, PerturbationOperator, RoutingKernel | Sensor degradation → CAMERA_PRIMARY / LIDAR_PRIMARY / FUSION |
-| *(v2.3.0)* Medical imaging | Chest X-ray + radiology report | **DivergenceRouter** (V1–V6): `stream_a` = scan latent (ViT/BioViL), `stream_b` = report latent (BioBERT) | Image–report disagreement → Execute / Investigate / Defer / Halt |
+| *(v2.3.0)* Medical imaging | Chest X-ray + radiology report | **DivergenceRouter** (V1–V7): `stream_a` = scan latent (ViT/BioViL), `stream_b` = report latent (BioBERT) | Image–report disagreement → Execute / Investigate / Defer / Halt |
 
 Each example runs zero-dependency (only `torch`) and produces a HMAC-signed audit record:
 
