@@ -34,9 +34,9 @@ Lár-JEPA is the world model layer of a three-part cognitive architecture:
 
 | Repository | Role |
 | :--- | :--- |
-| **[Lár](https://github.com/snath-ai/lar)** | The execution spine — deterministic graph engine, audit logging, EU AI Act compliance |
-| **[Lár DMN](https://github.com/snath-ai/DMN)** | The memory layer — solves catastrophic forgetting with sleep/dream consolidation |
-| **[Lár-JEPA](https://github.com/snath-ai/Lar-JEPA)** ← you are here | The world model — routes any cognitive architecture as a first-class node |
+| **[Lár](https://github.com/snath-ai/lar)** | The execution spine — deterministic graph engine, HMAC audit trail, 20 EU AI Act compliance primitives |
+| **[Lár-JEPA](https://github.com/snath-ai/Lar-JEPA)** ← you are here | The world model — 10 ABCs spanning the full inference-time contract (divergence routing, modal encoding, fault localisation, adapter routing) |
+| **[Lár DMN](https://github.com/snath-ai/DMN)** | The memory blueprint — `AbstractDMN` + `AbstractAdapterRouter`; domain implementations own storage and LoRA fitting; zero runtime dependencies |
 
 The industry is building the Brain (LLMs, JEPAs). We are building the Nervous System.
 
