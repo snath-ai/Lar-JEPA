@@ -62,7 +62,7 @@ without modification to any Lár-JEPA primitive.
 ### Research Publications
 
 The formal proofs behind this architecture are published open-access through
-**[Snath Research](https://github.com/snath-ai/snath-research)**:
+Zenodo (Sajeev 2026):
 
 | Paper | Short name | DOI | Proves |
 | :--- | :--- | :--- | :--- |
@@ -70,6 +70,7 @@ The formal proofs behind this architecture are published open-access through
 | Universal Cognitive Routing | **UCR** | [10.5281/zenodo.20278775](https://doi.org/10.5281/zenodo.20278775) | The V1–V7 contract is domain-universal across 7 verticals |
 | The Lár Training Loop | **LTL** | [10.5281/zenodo.20581128](https://doi.org/10.5281/zenodo.20581128) | Routing flags are gradient signals — annotation-free continual learning |
 | The Encoder Is Not the Memory | **EIM** | [10.5281/zenodo.20614051](https://doi.org/10.5281/zenodo.20614051) | V7 (Difficulty Invariance): D_hard geometry persists across encoder upgrades |
+| Physics Assumption Violations | **PAV** | [10.5281/zenodo.20682615](https://doi.org/10.5281/zenodo.20682615) | First physical-world validation — proprioceptive routing detects physics violations label-free; D_hard → DMN → LoRA adapters reduce divergence 65% on MuJoCo Walker2d |
 
 ---
 
