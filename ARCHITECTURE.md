@@ -541,14 +541,14 @@ JEPANode(context_encoder: f_x, predictor: g)
           (reads: predicted graph state description)
           (writes: LGSL routing instruction confirming action)
 ```
-This is the Lár-JEPA BrainNode as described in the DMN v3.0 preprint
-(DOI: 10.5281/zenodo.comingsoon). The JEPA provides one-step look-ahead
-planning; the LLM generates the explicit LGSL routing instruction. Trained
-and deployed separately; composed at inference time via GraphState.
+This is the Lár-JEPA BrainNode pattern: JEPA provides one-step look-ahead
+planning; LLM generates the LGSL routing instruction. See EIM paper
+(DOI: 10.5281/zenodo.20614051) for the encoder-memory separation contract.
+Trained and deployed separately; composed at inference time via GraphState.
 
 ### Pattern 7: Complete Enterprise Scientific Pipeline (Materials-JEPA)
 ```
-                     RecallNode (DMN Hippocampus Prior Knowledge)
+                     RecallNode (DMN prior failure-class heuristics)
                                 │
                           ElectrochemNode
                                 │
@@ -571,7 +571,7 @@ and deployed separately; composed at inference time via GraphState.
                                 │
                       ToolNode (Save Report)
                                 │
-               DMNWriteNode (Hippocampus Consolidation)
+               DMNWriteNode (DMN ingest — Tier 1 episodic queue)
 ```
 This pattern, implemented in `examples/materials_full_showcase.py`, demonstrates the absolute ceiling of the framework. It proves that real continuous-world prediction models (like the **Crystal JEPA**, trained natively with latent-space EMA target networks and masking mechanisms) can be seamlessly embedded into complex, legally compliant enterprise execution graphs alongside large language models.
 

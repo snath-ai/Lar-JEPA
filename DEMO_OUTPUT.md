@@ -106,7 +106,7 @@ python examples/run_trained_demo.py
   Site embedding shape: (20, 64)  ← learned, not random
   Library built in 4.1 ms
 
-✅ [JEPA→DMN] Hippocampus connection established.
+⚠️  [JEPA→DMN] No AbstractDMN provided. Using in-memory fallback.
 
 ────────────────────────────────────────────────────────────
   Phase 2: Lár Graph Execution (trained JEPA site embeddings)
@@ -133,7 +133,7 @@ python examples/run_trained_demo.py
   [AutoApprove] Simulated researcher approval: 'Li6PS5Cl (Argyrodite)'
   [AutoApprove] In production: HumanJuryNode blocks for real approval
 
-  [DMN Write] Heuristic committed to Hippocampus: True
+  [DMN Write] Heuristic committed to DMN: True
 
 ============================================================
   RESULT
@@ -181,10 +181,10 @@ The DMN is wired into the pipeline at two points:
 
 | Node | DMN Operation |
 |------|---------------|
-| `RecallNode` | `JEPA_DMN_Consolidation_Node.recall_heuristics()` — vector similarity search in Hippocampus |
-| `WriteHeuristicNode` | `JEPA_DMN_Consolidation_Node.write_trajectory_heuristic()` — commits to long-term memory |
+| `RecallNode` | `JEPA_DMN_Consolidation_Node.recall_heuristics()` — queries DMN Tier 2 semantic memory |
+| `WriteHeuristicNode` | `JEPA_DMN_Consolidation_Node.write_trajectory_heuristic()` — ingests into DMN Tier 1 |
 
-The recall returned 2 prior heuristics from the **spatial kinematics** domain (the N-body orbital engine). Same Hippocampus, cross-domain memory — this is an architectural property of the DMN, not a per-domain feature.
+The recall returned 2 prior heuristics from the **spatial kinematics** domain (the N-body orbital engine). Same DMN memory store, cross-domain — this is an architectural property of the AbstractDMN contract, not a per-domain feature.
 
 ---
 

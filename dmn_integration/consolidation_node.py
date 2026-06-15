@@ -1,63 +1,90 @@
 """
 JEPA ↔ DMN Consolidation Bridge
 ================================
-This module connects the Lár-JEPA world model execution layer to the
-Default Mode Network (DMN) episodic memory substrate.
+This module connects the Lár-JEPA world model execution layer to any
+AbstractDMN implementation via the lar-dmn blueprint contract.
 
 Role in the architecture
 ------------------------
 After the Lár routing spine commits a JEPA trajectory via COMMIT_TRAJECTORY,
-the successful execution trace should be consolidated into the DMN's
-episodic memory (Hippocampus / ChromaDB) so that:
+the successful execution trace is consolidated into the DMN's episodic memory
+(Tier 1) so that:
 
   1. Future JEPA planning cycles can retrieve prior successful heuristics
-     as warm context — preventing the JEPA from re-exploring known-good
-     latent regions unnecessarily.
+     as warm context — preventing re-exploration of known-good latent regions.
 
-  2. The Dreamer consolidation daemon (running in the DMN) can, during
-     the next idle cycle, synthesise multiple JEPA trajectory heuristics
-     into a semantic narrative — completing one pass of the Consolidation
-     Loop (Episodic → Semantic).
+  2. The domain DMN's consolidate() cycle can, during the next idle pass,
+     cluster accumulated D_hard events into Tier 2 failure-class centroids
+     and Tier 3 LoRA adapters — completing the Consolidation Loop.
 
-  3. Over time, the BrainNode LoRA adaptor can be trained on confirmed
-     JEPA routing decisions — completing the Consolidation Loop to the
-     procedural (weight-level) tier.
-
-DMN Hippocampus interface
--------------------------
-  save_memory(text: str, embedding: List[float], metadata: dict)
-      Writes a memory to ChromaDB + the JSON journal.
-  recall(query: str, max_memories: int) -> str
-      Retrieves semantically relevant memories from ChromaDB.
+AbstractDMN contract (lar-dmn v2.5.0+)
+--------------------------------------
+  ingest(event: Any) -> None
+      Accepts an event into the Tier 1 episodic queue (non-blocking).
+  recall(query: Any, **kwargs) -> Any
+      Retrieves context from Tier 2 for the current inference cycle.
+  consolidate(**kwargs) -> List[dict]
+      Processes Tier-1 events into durable Tier-2/3 artifacts (run overnight
+      or on threshold).
 
 Prior art reference
 -------------------
-This bridge establishes the 'Namespace Sovereignty' and 'Derivative Works
-Doctrine' for linking JEPA predictive simulation to the DMN memory substrate.
-See DMN v3.0 preprint: 'The Dream Loop' (to be published Zenodo, April 2026).
+Establishes the 'Namespace Sovereignty' link from JEPA predictive simulation
+to the DMN memory substrate. See EIM paper (DOI: 10.5281/zenodo.20614051)
+for the V7 Difficulty Invariance proof — D_hard geometry persists across
+encoder upgrades, making this bridge architecture-independent.
 """
 
-import json
 import datetime
 from typing import Any, Dict, List, Optional
 
 # ---------------------------------------------------------------------------
-# DMN Hippocampus import — lar-dmn must be installed (pip install -e ../DMN/lar)
+# AbstractDMN import — optional; falls back to _InMemoryDMN if not installed
 # ---------------------------------------------------------------------------
 try:
-    from brain.hippocampus import Hippocampus
-    _HIPPOCAMPUS_AVAILABLE = True
+    from brain.abstract_dmn import AbstractDMN as _AbstractDMN
+    _ABSTRACT_DMN_AVAILABLE = True
 except ImportError:
-    _HIPPOCAMPUS_AVAILABLE = False
-    Hippocampus = None  # type: ignore
+    _AbstractDMN = object  # type: ignore
+    _ABSTRACT_DMN_AVAILABLE = False
+
+
+class _InMemoryDMN:
+    """
+    Minimal in-memory DMN fallback for demos and tests.
+
+    Not HMAC-signed, not persisted — suitable only for local development.
+    For production, pass a proper AbstractDMN subclass to
+    JEPA_DMN_Consolidation_Node(dmn=...).
+    """
+
+    def __init__(self) -> None:
+        self._events: List[Dict[str, Any]] = []
+
+    def ingest(self, event: Any) -> None:
+        self._events.append(event if isinstance(event, dict) else {"raw": str(event)})
+
+    def consolidate(self, **kwargs) -> List[dict]:
+        return []
+
+    def recall(self, query: Any, **kwargs) -> str:
+        query_str = str(query).lower()
+        for ev in reversed(self._events):
+            summary = ev.get("summary", "")
+            if query_str in summary.lower():
+                return summary
+        return self._events[-1].get("summary", "") if self._events else ""
+
+    def stats(self) -> dict:
+        return {"events": len(self._events)}
 
 
 # ---------------------------------------------------------------------------
 
 class JEPA_DMN_Consolidation_Node:
     """
-    The canonical bridge between the Lár-JEPA world model and the DMN
-    episodic memory store (Hippocampus / ChromaDB).
+    Canonical bridge between the Lár-JEPA world model and an AbstractDMN
+    implementation.
 
     This node sits at the boundary between the JEPA execution layer and the
     DMN memory substrate. It is invoked by the routing graph after the
@@ -67,49 +94,45 @@ class JEPA_DMN_Consolidation_Node:
     The node performs two operations:
 
       1. write_trajectory_heuristic(trajectory_log)
-         Converts a committed JEPA trajectory into a text + metadata record
-         and writes it to the DMN Hippocampus (ChromaDB + JSON journal).
-         This is the Episodic tier write in the Consolidation Loop.
+         Converts a committed JEPA trajectory into an event dict and
+         ingests it into the DMN (Tier 1 episodic queue).
 
       2. recall_heuristics(query, max_results)
-         Retrieves semantically relevant past JEPA heuristics from the DMN
-         Hippocampus to warm the planning context for the current cycle.
-         This is the Episodic tier read in the Consolidation Loop.
+         Retrieves relevant past JEPA heuristics from the DMN's Tier 2
+         semantic memory to warm the planning context for the current cycle.
 
-    Both operations degrade gracefully if the DMN Hippocampus is unavailable
-    (e.g., ChromaDB not initialised, running in test mode). The JEPA
-    execution spine is never blocked by DMN availability.
+    Both operations degrade gracefully if no DMN is provided — a minimal
+    in-memory fallback is used so that JEPA execution is never blocked.
+
+    Usage
+    -----
+    Wire a concrete AbstractDMN subclass at construction time:
+
+        from my_domain.dmn import MyDomainDMN
+        bridge = JEPA_DMN_Consolidation_Node(dmn=MyDomainDMN())
+
+    Or omit for local demos (in-memory, not persisted):
+
+        bridge = JEPA_DMN_Consolidation_Node()
 
     Install requirement
     -------------------
-    Run ``pip install -e ../DMN/lar`` (or ``poetry install`` in the project
-    root after wiring the lar-dmn path dep) so that ``brain`` is importable.
+    ``pip install lar-dmn``  (or ``pip install -e path/to/DMN/lar``)
+    so that ``brain.abstract_dmn`` is importable when providing a
+    custom AbstractDMN subclass.
     """
 
-    def __init__(
-        self,
-        chroma_path: Optional[str] = None,
-        dreams_path: Optional[str] = None,
-    ):
-        self._hippocampus: Optional["Hippocampus"] = None
-
-        if _HIPPOCAMPUS_AVAILABLE:
-            try:
-                self._hippocampus = Hippocampus(
-                    chroma_path=chroma_path,
-                    dreams_path=dreams_path,
-                )
-                print("✅ [JEPA→DMN] Hippocampus connection established.")
-            except Exception as e:
-                print(
-                    f"⚠️  [JEPA→DMN] Hippocampus init failed: {e}. "
-                    "Running in degraded mode — trajectory heuristics will not be persisted."
-                )
+    def __init__(self, dmn: Optional[Any] = None) -> None:
+        if dmn is not None:
+            self._dmn = dmn
+            print("✅ [JEPA→DMN] DMN connection established.")
         else:
+            self._dmn = _InMemoryDMN()
             print(
-                "⚠️  [JEPA→DMN] lar-dmn not installed. "
-                "Run: pip install -e ../DMN/lar\n"
-                "Running in degraded mode — trajectory heuristics will not be persisted."
+                "⚠️  [JEPA→DMN] No AbstractDMN provided. "
+                "Using in-memory fallback — heuristics will not be persisted.\n"
+                "Wire a concrete AbstractDMN subclass: "
+                "JEPA_DMN_Consolidation_Node(dmn=MyDomainDMN())"
             )
 
     # ------------------------------------------------------------------
@@ -117,50 +140,36 @@ class JEPA_DMN_Consolidation_Node:
     def write_trajectory_heuristic(
         self,
         trajectory_log: Dict[str, Any],
-        embedding: Optional[List[float]] = None,
+        **kwargs,
     ) -> bool:
         """
         Consolidate a committed JEPA trajectory into the DMN episodic store.
-        """
-        if self._hippocampus is None:
-            return False
 
-        domain      = trajectory_log.get("domain", "unknown")
-        outcome     = trajectory_log.get("outcome", "unknown")
-        entropy     = trajectory_log.get("entropic_loss", -1.0)
+        Converts the trajectory log into a domain-agnostic event dict and
+        calls ``self._dmn.ingest(event)``. The DMN's consolidate() cycle
+        will later cluster these into Tier 2 failure-class centroids.
+        """
+        domain = trajectory_log.get("domain", "unknown")
+        outcome = trajectory_log.get("outcome", "unknown")
+        entropy = trajectory_log.get("entropic_loss", -1.0)
         action_repr = str(trajectory_log.get("action", ""))[:120]
 
-        summary = (
-            f"[JEPA Heuristic] Domain: {domain} | Outcome: {outcome} | "
-            f"Entropic loss: {entropy:.4f} | Action: {action_repr}"
-        )
-
-        raw_meta = {
-            "source":        "jepa_consolidation_node",
-            "domain":        domain,
-            "outcome":       outcome,
+        event: Dict[str, Any] = {
+            "summary": (
+                f"[JEPA Heuristic] Domain: {domain} | Outcome: {outcome} | "
+                f"Entropic loss: {entropy:.4f} | Action: {action_repr}"
+            ),
+            "source": "jepa_consolidation_node",
+            "domain": domain,
+            "outcome": outcome,
             "entropic_loss": entropy,
-            "memory_type":   "episodic",
-            "timestamp":     datetime.datetime.utcnow().isoformat(),
+            "memory_type": "episodic",
+            "timestamp": datetime.datetime.utcnow().isoformat(),
             **trajectory_log.get("metadata", {}),
-        }
-        metadata = {
-            k: json.dumps(v) if isinstance(v, (list, dict)) else v
-            for k, v in raw_meta.items()
         }
 
         try:
-            if embedding:
-                self._hippocampus.save_memory(summary, embedding, metadata)
-            else:
-                # Use public method if available, fallback to protected for backwards compatibility
-                gen_fn = getattr(self._hippocampus, "generate_embedding", getattr(self._hippocampus, "_generate_embedding", None))
-                generated_embedding = gen_fn(summary) if gen_fn else None
-                if generated_embedding:
-                    self._hippocampus.save_memory(summary, generated_embedding, metadata)
-                else:
-                    print("⚠️  [JEPA→DMN] Embedding generation failed. Skipping memory save to avoid ChromaDB dimension mismatch.")
-                    return False
+            self._dmn.ingest(event)
             return True
         except Exception as e:
             print(f"❌ [JEPA→DMN] write_trajectory_heuristic failed: {e}")
@@ -175,24 +184,21 @@ class JEPA_DMN_Consolidation_Node:
     ) -> str:
         """
         Retrieve semantically relevant JEPA trajectory heuristics from the
-        DMN episodic store to warm the current planning cycle.
+        DMN Tier 2 semantic memory to warm the current planning cycle.
         """
-        if self._hippocampus is None:
-            return ""
-
         try:
-            return self._hippocampus.recall(query=query, max_memories=max_results)
+            result = self._dmn.recall(query, max_results=max_results)
+        except TypeError:
+            result = self._dmn.recall(query)
         except Exception as e:
             print(f"⚠️  [JEPA→DMN] recall_heuristics failed: {e}")
             return ""
+        return result if isinstance(result, str) else str(result) if result else ""
 
     # ------------------------------------------------------------------
 
     def extract_heuristic_from_trajectory(self, trajectory_log: Any) -> Any:
-        """
-        Legacy entry point — delegates to write_trajectory_heuristic.
-        Retained for backward compatibility.
-        """
+        """Legacy entry point — delegates to write_trajectory_heuristic."""
         if isinstance(trajectory_log, dict):
             return self.write_trajectory_heuristic(trajectory_log)
         return self.write_trajectory_heuristic({"raw": str(trajectory_log)})

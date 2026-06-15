@@ -20,7 +20,7 @@ Primitives used
   ToolNode          — write the final lab report to disk
   ClearErrorNode    — graceful impasse recovery
   AddValueNode      — set final outcome in state
-  JEPA_DMN_Consolidation_Node — episodic recall + write (DMN Hippocampus)
+  JEPA_DMN_Consolidation_Node — episodic recall + write (AbstractDMN bridge)
 
 Run (train first if needed):
     python examples/train_crystal_jepa.py          # ~60s, once
@@ -106,7 +106,7 @@ def _risk(thermal_entropy: float) -> str:
 # ════════════════════════════════════════════════════════════════════════════
 
 class RecallNode(BaseNode):
-    """DMN recall — queries Hippocampus for prior electrolyte screening results."""
+    """DMN recall — queries Tier 2 memory for prior electrolyte screening results."""
     def __init__(self, bridge: JEPA_DMN_Consolidation_Node, next_node=None):
         self.bridge = bridge; self.next_node = next_node
     def execute(self, state):
@@ -205,7 +205,7 @@ class EvalCrystalBranchNode(BaseNode):
 
 
 class DMNWriteNode(BaseNode):
-    """Commits the selected candidate to DMN Hippocampus long-term memory."""
+    """Commits the selected candidate to DMN Tier 1 episodic memory."""
     def __init__(self, bridge: JEPA_DMN_Consolidation_Node, next_node=None):
         self.bridge = bridge; self.next_node = next_node
     def execute(self, state):
@@ -223,7 +223,7 @@ class DMNWriteNode(BaseNode):
                 "jepa_encoder":         "crystal_jepa_encoder.pt",
             },
         })
-        print(f"\n  [DMN Write] Heuristic written to Hippocampus: {ok}")
+        print(f"\n  [DMN Write] Heuristic written to DMN: {ok}")
         return self.next_node
 
 
@@ -413,9 +413,7 @@ def run():
     router         = ThermalStabilityRouter(thermal_threshold=0.40, max_formation_energy=0.0)
 
     # ── DMN bridge ────────────────────────────────────────────────────────
-    _chroma = os.path.join(_JEPA_ROOT, "DMN", "lar", "data", "chroma_db")
-    _dreams = os.path.join(_JEPA_ROOT, "DMN", "lar", "memory", "dreams.json")
-    dmn = JEPA_DMN_Consolidation_Node(chroma_path=_chroma, dreams_path=_dreams)
+    dmn = JEPA_DMN_Consolidation_Node()
 
     # ════════════════════════════════════════════════════════════════════════
     # Graph construction (declared in reverse execution order)
@@ -602,7 +600,7 @@ def run():
     print("                      │    └─ ReduceNode (synthesize → final recommendation)")
     print("                      │         └─ DemoJuryNode (EU Art.14 approval gate)")
     print("                      │              └─ ToolNode (save lab report)")
-    print("                      │                   └─ DMNWriteNode (Hippocampus write)")
+    print("                      │                   └─ DMNWriteNode (DMN ingest)")
     print("                      │                        └─ AddValueNode (COMMITTED)")
     print("                      └─ ClearErrorNode → AddValueNode (IMPASSE)")
 
@@ -674,7 +672,7 @@ def run():
         ("ToolNode",                    "Save lab report to disk"),
         ("ClearErrorNode",              "Impasse recovery path"),
         ("AddValueNode (×2)",           "Set final outcome"),
-        ("JEPA_DMN_Consolidation_Node", "Recall + Write Hippocampus (ChromaDB)"),
+        ("JEPA_DMN_Consolidation_Node", "Recall (dmn.recall) + Write (dmn.ingest)"),
     ]
     for name, desc in primitives:
         print(f"  ✓ {name:<35} {desc}")

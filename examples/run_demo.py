@@ -301,7 +301,7 @@ class WriteHeuristicNode(BaseNode):
             },
         }
         ok = self.bridge.write_trajectory_heuristic(trajectory_log)
-        print(f"\n  [DMN Write] Heuristic committed to Hippocampus: {ok}")
+        print(f"\n  [DMN Write] Heuristic committed to DMN: {ok}")
         return self.next_node
 
 
@@ -363,9 +363,7 @@ def run():
     router = ThermalStabilityRouter(thermal_threshold=0.55, max_formation_energy=0.0)
 
     # ── Phase 4: DMN Bridge ───────────────────────────────────────────────
-    _chroma = os.path.join(_JEPA_ROOT, "DMN", "lar", "data", "chroma_db")
-    _dreams = os.path.join(_JEPA_ROOT, "DMN", "lar", "memory", "dreams.json")
-    dmn_bridge = JEPA_DMN_Consolidation_Node(chroma_path=_chroma, dreams_path=_dreams)
+    dmn_bridge = JEPA_DMN_Consolidation_Node()
 
     print(f"\n{'─'*60}")
     print("  Phase 2: Lár Graph Execution")

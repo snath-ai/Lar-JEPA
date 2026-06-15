@@ -6,23 +6,22 @@ Demonstrates the full cognitive stack:
     AdaptiveNode (Lár v2.1.0)
         → CognitiveNodeAdapter (wraps NBodyKinematicsJEPA)
         → EntropicRouterNode (COMMIT / REPLAN / IMPASSE)
-        → ConsolidationNode (writes heuristic to DMN Hippocampus)
-        → RecallNode (reads prior heuristics for next planning cycle)
+        → WriteHeuristicNode (ingests trajectory into DMN Tier 1)
+        → RecallNode (reads prior heuristics via DMN recall())
 
 Architecture:
 
     Lár graph engine        — deterministic DAG executor
     lar_jepa interfaces     — AbstractManifold, AbstractContextBridge
     NBodyKinematicsJEPA     — reference JEPA world model (spatial forecasting)
-    DMN Hippocampus         — ChromaDB-backed episodic memory (graceful degrades
-                              to no-op if ChromaDB / Ollama not running)
+    JEPA_DMN_Consolidation_Node — bridges JEPA to any AbstractDMN implementation
+                                  (uses in-memory fallback when no DMN provided)
 
 Run:
     cd lar_jepa
     python examples/jepa_dmn_showcase.py
 
 No GPU, no cloud APIs required. All stubs produce deterministic output.
-Set OLLAMA_HOST to a live Ollama endpoint to enable real vector search.
 """
 
 import sys
@@ -54,15 +53,12 @@ from dmn_integration.consolidation_node import JEPA_DMN_Consolidation_Node
 
 
 # ---------------------------------------------------------------------------
-# 1.  DMN bridge (gracefully degrades if ChromaDB / Ollama unavailable)
+# 1.  DMN bridge — uses in-memory fallback for this demo.
+#     Wire a concrete AbstractDMN subclass for persistent storage:
+#         from my_domain.dmn import MyDomainDMN
+#         consolidation = JEPA_DMN_Consolidation_Node(dmn=MyDomainDMN())
 # ---------------------------------------------------------------------------
-CHROMA_PATH = os.path.join(_ROOT, "DMN", "lar", "data", "chroma_db")
-DREAMS_PATH = os.path.join(_ROOT, "DMN", "lar", "memory", "dreams.json")
-
-consolidation = JEPA_DMN_Consolidation_Node(
-    chroma_path=CHROMA_PATH,
-    dreams_path=DREAMS_PATH,
-)
+consolidation = JEPA_DMN_Consolidation_Node()
 
 
 # ---------------------------------------------------------------------------
@@ -70,8 +66,8 @@ consolidation = JEPA_DMN_Consolidation_Node(
 # ---------------------------------------------------------------------------
 class RecallHeuristicsNode(BaseNode):
     """
-    Queries the DMN Hippocampus for prior committed trajectories relevant
-    to the current planning context. Writes results to state["prior_heuristics"].
+    Queries the DMN Tier 2 semantic memory for prior committed trajectories
+    relevant to the current planning context. Writes results to state["prior_heuristics"].
     """
     def __init__(self, bridge: JEPA_DMN_Consolidation_Node, next_node=None):
         self.bridge = bridge
@@ -124,13 +120,13 @@ class EntropicRouterNode(BaseNode):
 
 
 # ---------------------------------------------------------------------------
-# 4.  Consolidation node — writes committed trajectory to DMN Hippocampus
+# 4.  Consolidation node — ingests committed trajectory into DMN Tier 1
 # ---------------------------------------------------------------------------
 class WriteHeuristicNode(BaseNode):
     """
-    After COMMIT_TRAJECTORY, consolidates the successful trajectory into the
-    DMN episodic memory store (Hippocampus / ChromaDB) so future planning
-    cycles can retrieve it as warm context.
+    After COMMIT_TRAJECTORY, ingests the successful trajectory into the
+    DMN Tier 1 episodic queue so future planning cycles can retrieve it
+    as warm context via recall().
     """
     def __init__(self, bridge: JEPA_DMN_Consolidation_Node, next_node=None):
         self.bridge = bridge
@@ -265,6 +261,5 @@ if __name__ == "__main__":
     )
 
     print("\n✅ Showcase complete.")
-    print("   If ChromaDB + Ollama are running, heuristics are persisted in:")
-    print(f"   {CHROMA_PATH}")
-    print("   Run again to see warm context recalled in Cycle 1's RecallNode.\n")
+    print("   Heuristics are stored in-memory for this demo (not persisted).")
+    print("   Wire a concrete AbstractDMN subclass for durable storage.\n")

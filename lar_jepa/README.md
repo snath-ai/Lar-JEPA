@@ -380,23 +380,23 @@ See `examples/metacognition/` for 5 working Proof-of-Concepts.
 
 ## The DMN Showcase: A Cognitive Architecture
 
-**[snath-ai/DMN](https://github.com/snath-ai/DMN)** - The flagship demonstration of Lár's capabilities.
+**[snath-ai/DMN](https://github.com/snath-ai/DMN)** - The memory blueprint for any domain that encounters situations its training didn't anticipate.
 
-DMN (Default Mode Network) is a **complete cognitive architecture** built entirely on Lár, showcasing what's possible when you combine:
-- **Bicameral Mind**: Fast/Slow thinking systems running in parallel
-- **Sleep Cycles**: Automatic memory consolidation during "rest" periods  
-- **Episodic Memory**: Long-term storage with vectorized recall
-- **Self-Awareness**: Metacognitive introspection and adaptive behavior
+DMN (Default Mode Network) is a **domain-agnostic continual learning blueprint** — two abstract base classes (`AbstractDMN` + `AbstractAdapterRouter`) with zero runtime dependencies. Domain implementations (Robotics, Aviation, Basis, Research) extend these to build their own HMAC-signed memory pipelines. What you get:
+- **Three-tier memory contract**: `ingest()` (Tier 1 episodic queue) → `consolidate()` (Tier 2 failure-class centroids + Tier 3 LoRA adapters) → `recall()` (Tier 2 lookup)
+- **System 1 / System 2 routing**: Trust-invariant centroid match (no temporal gate) + temporally-gated LoRA injection (`W = exp(-λ·Δt)`)
+- **HMAC-signed artifacts**: Every durable output of `consolidate()` is signed before write, verified before injection
+- **Zero runtime deps**: Pure Python stdlib — any domain brings its own storage
 
 > [!NOTE]
-> **DMN proves that Lár isn't just for chatbots.** It's a platform for building genuinely intelligent systems with memory, learning, and self-improvement capabilities.
+> **DMN is not an agent framework.** It is the memory layer beneath one — a blueprint that any domain can subclass and ship independently.
 
 ### What Makes DMN Special?
 
-| Feature | Traditional Agents | DMN (Built on Lár) |
-|---------|-------------------|---------------------|
-| **Memory** | Context window only | Persistent episodic memory with sleep consolidation |
-| **Learning** | Static prompts | Learns from interactions and self-corrects |
+| Feature | Traditional ML | DMN Blueprint |
+|---------|----------------|---------------|
+| **Memory** | Frozen weights | Three-tier live contract (episodic → semantic → procedural) |
+| **Adaptation** | Full retraining | LoRA injection at inference, gated by temporal trust | 
 | **Architecture** | Single-path logic | Dual-process (Fast + Slow) cognitive system |
 | **Auditability** | Black box | Complete glass-box audit trail of every thought |
 
@@ -733,7 +733,7 @@ print("Agent serialized successfully. Ready for deployment.")
 ## Ready to Build a Real Agent?
 We have built two "killer demos" that prove this "glass box" model. You can clone, build, and run them today.
 
-- **[snath-ai/DMN](https://github.com/snath-ai/DMN)**: **The Flagship Showcase.** A cognitive architecture with a "Bicameral Mind" (Fast/Slow) that sleeps, dreams, and consolidates long-term memory to solve catastrophic forgetting.
+- **[snath-ai/DMN](https://github.com/snath-ai/DMN)**: **The Memory Blueprint.** A domain-agnostic continual learning memory contract (AbstractDMN + AbstractAdapterRouter, zero runtime deps) that solves catastrophic forgetting architecturally — D_hard events accumulate at runtime, overnight consolidation clusters them into HMAC-signed failure-class centroids and LoRA adapters, inference corrects forward without retraining.
 
 - **[`examples/compliance/4_access_control_agent.py`](examples/compliance/4_access_control_agent.py)**: **The Enterprise Flagship.** A "Juried Layer" demo that combines LLM Reasoning, Deterministic Policy, and Human-in-the-Loop Interrupts for secure infrastructure access.
 

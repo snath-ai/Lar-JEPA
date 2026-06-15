@@ -84,15 +84,9 @@ from materials_engine.stability_router import ThermalStabilityRouter
 from dmn_integration.consolidation_node import JEPA_DMN_Consolidation_Node
 
 # ---------------------------------------------------------------------------
-# DMN Configuration
+# DMN Bridge — uses in-memory fallback for this demo.
 # ---------------------------------------------------------------------------
-_CHROMA_PATH = os.path.join(_JEPA_ROOT, "DMN", "lar", "data", "chroma_db")
-_DREAMS_PATH = os.path.join(_JEPA_ROOT, "DMN", "lar", "memory", "dreams.json")
-
-consolidation_bridge = JEPA_DMN_Consolidation_Node(
-    chroma_path=_CHROMA_PATH,
-    dreams_path=_DREAMS_PATH,
-)
+consolidation_bridge = JEPA_DMN_Consolidation_Node()
 
 # ---------------------------------------------------------------------------
 # Mock battery electrolyte candidates
@@ -237,7 +231,7 @@ class CycleStabilityHead(nn.Module):
 # ---------------------------------------------------------------------------
 
 class RecallMaterialHeuristicsNode(BaseNode):
-    """Queries DMN Hippocampus for prior electrolyte screening results."""
+    """Queries DMN Tier 2 memory for prior electrolyte screening results."""
 
     def __init__(self, bridge: JEPA_DMN_Consolidation_Node, next_node=None):
         self.bridge    = bridge
@@ -442,7 +436,7 @@ class WriteMaterialHeuristicNode(BaseNode):
         ok = self.bridge.write_trajectory_heuristic(trajectory_log)
         print(
             f"\n[DMN Consolidation] '{label}' committed. "
-            f"Heuristic written to Hippocampus: {ok}"
+            f"Heuristic written to DMN: {ok}"
         )
         return self.next_node
 

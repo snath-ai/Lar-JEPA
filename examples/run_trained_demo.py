@@ -308,7 +308,7 @@ class WriteHeuristicNode(BaseNode):
                 "jepa_encoder":         "crystal_jepa_encoder.pt",
             },
         })
-        print(f"\n  [DMN Write] Heuristic committed to Hippocampus: {ok}")
+        print(f"\n  [DMN Write] Heuristic committed to DMN: {ok}")
         return self.next_node
 
 
@@ -373,9 +373,7 @@ def run():
     stability_head = CycleStabilityHead(embed_dim=EMBED_DIM)
     router         = ThermalStabilityRouter(thermal_threshold=0.55, max_formation_energy=0.0)
 
-    _chroma = os.path.join(_JEPA_ROOT, "DMN", "lar", "data", "chroma_db")
-    _dreams = os.path.join(_JEPA_ROOT, "DMN", "lar", "memory", "dreams.json")
-    dmn     = JEPA_DMN_Consolidation_Node(chroma_path=_chroma, dreams_path=_dreams)
+    dmn     = JEPA_DMN_Consolidation_Node()
 
     print(f"\n{'─'*60}")
     print("  Phase 2: Lár Graph Execution (trained JEPA site embeddings)")

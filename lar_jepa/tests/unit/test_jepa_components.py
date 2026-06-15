@@ -339,52 +339,50 @@ class TestEntropicVetoRouter:
 # JEPA_DMN_Consolidation_Node — graceful degradation
 # ==================================================================
 
-class TestConsolidationNodeDegradation:
-    """Tests the no-hippocampus degraded mode (ChromaDB unavailable)."""
+class TestConsolidationNodeInMemoryFallback:
+    """Tests the in-memory fallback mode (no AbstractDMN provided)."""
 
-    def _make_node_without_hippo(self):
-        node = JEPA_DMN_Consolidation_Node.__new__(JEPA_DMN_Consolidation_Node)
-        node._hippocampus = None
-        return node
-
-    def test_write_returns_false_without_hippocampus(self):
-        node = self._make_node_without_hippo()
+    def test_write_returns_true_with_in_memory_fallback(self):
+        node = JEPA_DMN_Consolidation_Node()
         result = node.write_trajectory_heuristic({
             "domain": "spatial",
             "outcome": "committed",
             "entropic_loss": 0.05,
         })
-        assert result is False
+        assert result is True
 
-    def test_recall_returns_empty_string_without_hippocampus(self):
-        node = self._make_node_without_hippo()
-        result = node.recall_heuristics("orbital insertion")
-        assert result == ""
+    def test_recall_returns_string_with_in_memory_fallback(self):
+        node = JEPA_DMN_Consolidation_Node()
+        node.write_trajectory_heuristic({
+            "domain": "spatial_kinematics",
+            "outcome": "committed",
+            "entropic_loss": 0.049,
+        })
+        result = node.recall_heuristics("spatial_kinematics")
+        assert isinstance(result, str)
 
     def test_extract_heuristic_legacy_delegates_write(self):
-        node = self._make_node_without_hippo()
-        # Legacy method — should return False when no hippocampus
+        node = JEPA_DMN_Consolidation_Node()
         result = node.extract_heuristic_from_trajectory({"domain": "test"})
-        assert result is False
+        assert result is True
 
-    def test_extract_heuristic_non_dict_wraps_and_returns_false(self):
-        node = self._make_node_without_hippo()
+    def test_extract_heuristic_non_dict_wraps(self):
+        node = JEPA_DMN_Consolidation_Node()
         result = node.extract_heuristic_from_trajectory("a plain string")
-        assert result is False
+        assert result is True
 
 
-class TestConsolidationNodeWithHippocampus:
-    """Tests the write/recall paths with a mocked hippocampus."""
+class TestConsolidationNodeWithMockDMN:
+    """Tests the write/recall paths with a mocked AbstractDMN."""
 
-    def _make_node_with_mock_hippo(self):
-        node = JEPA_DMN_Consolidation_Node.__new__(JEPA_DMN_Consolidation_Node)
-        mock_hippo = MagicMock()
-        mock_hippo._generate_embedding.return_value = None  # journal-only path
-        node._hippocampus = mock_hippo
-        return node, mock_hippo
+    def _make_node_with_mock_dmn(self):
+        mock_dmn = MagicMock()
+        mock_dmn.recall.return_value = ""
+        node = JEPA_DMN_Consolidation_Node(dmn=mock_dmn)
+        return node, mock_dmn
 
-    def test_write_calls_save_memory(self):
-        node, mock_hippo = self._make_node_with_mock_hippo()
+    def test_write_calls_ingest(self):
+        node, mock_dmn = self._make_node_with_mock_dmn()
         result = node.write_trajectory_heuristic({
             "domain": "spatial_kinematics",
             "outcome": "committed",
@@ -392,44 +390,34 @@ class TestConsolidationNodeWithHippocampus:
             "action": [1.0, 0.0],
         })
         assert result is True
-        mock_hippo.save_memory.assert_called_once()
+        mock_dmn.ingest.assert_called_once()
 
-    def test_write_uses_provided_embedding(self):
-        node, mock_hippo = self._make_node_with_mock_hippo()
-        embedding = [0.1, 0.2, 0.3]
-        node.write_trajectory_heuristic(
-            {"domain": "test", "outcome": "committed", "entropic_loss": 0.1},
-            embedding=embedding,
-        )
-        call_args = mock_hippo.save_memory.call_args
-        assert call_args[0][1] == embedding
-
-    def test_write_includes_domain_in_summary(self):
-        node, mock_hippo = self._make_node_with_mock_hippo()
+    def test_write_includes_domain_in_ingested_event(self):
+        node, mock_dmn = self._make_node_with_mock_dmn()
         node.write_trajectory_heuristic({
             "domain": "orbital_mechanics",
             "outcome": "committed",
             "entropic_loss": 0.05,
         })
-        summary = mock_hippo.save_memory.call_args[0][0]
-        assert "orbital_mechanics" in summary
+        ingested = mock_dmn.ingest.call_args[0][0]
+        assert "orbital_mechanics" in ingested.get("summary", "")
+        assert ingested["domain"] == "orbital_mechanics"
 
-    def test_write_catches_save_exception_returns_false(self):
-        node, mock_hippo = self._make_node_with_mock_hippo()
-        mock_hippo.save_memory.side_effect = RuntimeError("ChromaDB down")
-        mock_hippo._generate_embedding.return_value = [0.1]  # force save_memory path
+    def test_write_catches_ingest_exception_returns_false(self):
+        node, mock_dmn = self._make_node_with_mock_dmn()
+        mock_dmn.ingest.side_effect = RuntimeError("DMN unavailable")
         result = node.write_trajectory_heuristic({"domain": "test", "entropic_loss": 0.1})
         assert result is False
 
-    def test_recall_calls_hippocampus_recall(self):
-        node, mock_hippo = self._make_node_with_mock_hippo()
-        mock_hippo.recall.return_value = "- Prior heuristic from Cycle N"
+    def test_recall_calls_dmn_recall(self):
+        node, mock_dmn = self._make_node_with_mock_dmn()
+        mock_dmn.recall.return_value = "- Prior heuristic from Cycle N"
         result = node.recall_heuristics("orbital insertion", max_results=3)
-        mock_hippo.recall.assert_called_once_with(query="orbital insertion", max_memories=3)
+        assert mock_dmn.recall.called
         assert "Prior heuristic" in result
 
     def test_recall_catches_exception_returns_empty(self):
-        node, mock_hippo = self._make_node_with_mock_hippo()
-        mock_hippo.recall.side_effect = RuntimeError("network error")
+        node, mock_dmn = self._make_node_with_mock_dmn()
+        mock_dmn.recall.side_effect = RuntimeError("network error")
         result = node.recall_heuristics("query")
         assert result == ""

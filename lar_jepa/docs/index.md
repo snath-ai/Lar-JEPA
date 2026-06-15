@@ -47,7 +47,7 @@ Lár supports **DeepSeek R1**, **OpenAI o1**, and **Liquid Thinking** out of the
 
 Learn by building with our ready-made demos:
 
-*   **[DMN: The Showcase](https://github.com/snath-ai/DMN)**: A Cognitive Architecture that sleeps, dreams, and remembers.
+*   **[DMN: The Memory Blueprint](https://github.com/snath-ai/DMN)**: A domain-agnostic continual learning memory contract — D_hard events in, HMAC-signed failure-class centroids + LoRA adapters out. Zero runtime dependencies.
 *   **[RAG Agent Demo](https://github.com/snath-ai/rag-demo)**: A self-correcting RAG agent with local vector search.
 *   **[Customer Support Swarm](https://github.com/snath-ai/customer-support-demo)**: A multi-agent orchestration pattern.
 *   **[Pattern Library](core-concepts/4-core-patterns.md)**: 21+ robust engineering patterns (RAG, Swarms, Safety, etc).

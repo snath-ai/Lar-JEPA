@@ -119,7 +119,7 @@ python examples/jepa_dmn_showcase.py
 
 ```
 ---- Lár Engine v2.1.0 Successfully Imported ------
-✅ [JEPA→DMN] Hippocampus connection established.
+⚠️  [JEPA→DMN] No AbstractDMN provided. Using in-memory fallback — heuristics will not be persisted.
 
 SCENARIO: Orbital insertion — stable trajectory
 [RecallNode] Prior heuristics: (no prior heuristics)
@@ -164,7 +164,7 @@ python examples/run_trained_demo.py
 ```
 
 ```
-  ✅ [JEPA→DMN] Hippocampus connection established.
+  ⚠️  [JEPA→DMN] No AbstractDMN provided. Using in-memory fallback.
   [DMN Recall] 'Li6PS5Cl (Argyrodite)': (2 prior heuristics recalled)
   [ThermalStabilityRouter] COMMIT: thermal_entropy=0.208 — stable.
   [DMN Write] Heuristic committed: True
@@ -331,10 +331,10 @@ JEPA simulations are expensive. Running the same latent-space search twice is wa
 
 ```
 Planning Cycle N
-  RecallNode → queries DMN Hippocampus for past committed trajectories
+  RecallNode → queries DMN Tier 2 for past committed trajectory heuristics
   CognitiveNodeAdapter (JEPA) → predict, score entropy
   EntropicRouter → COMMIT_TRAJECTORY
-  WriteHeuristicNode → writes trajectory + entropy score to ChromaDB
+  WriteHeuristicNode → ingests trajectory event into DMN Tier 1 (D_hard queue)
 
 Planning Cycle N+1
   RecallNode → retrieves Cycle N heuristic as warm context
@@ -342,9 +342,20 @@ Planning Cycle N+1
   ...
 ```
 
-The Hippocampus is ChromaDB-backed with two collections: `long_term_memory` (raw JEPA traces) and `warm_memory` (semantic summaries produced by the DMN Dreamer during idle). Both tiers are searched at recall time.
+`JEPA_DMN_Consolidation_Node` accepts any `AbstractDMN` subclass (from `lar-dmn`). Provide your own domain DMN, or omit for an in-memory fallback suitable for demos:
 
-Runs without cloud APIs. Set `OLLAMA_HOST` for real vector embeddings; the bridge degrades gracefully to no-op if ChromaDB is unavailable — JEPA execution never blocks.
+```python
+from dmn_integration.consolidation_node import JEPA_DMN_Consolidation_Node
+
+# Demo (in-memory, not persisted)
+bridge = JEPA_DMN_Consolidation_Node()
+
+# Production (wire a concrete AbstractDMN subclass)
+from my_domain.dmn import MyDomainDMN
+bridge = JEPA_DMN_Consolidation_Node(dmn=MyDomainDMN())
+```
+
+The bridge degrades gracefully to no-op when no DMN is available — JEPA execution never blocks.
 
 ---
 
@@ -403,7 +414,7 @@ pytest lar_jepa/tests/unit/ -v
 # AbstractPerturbationOperator (P1–P6), AbstractRoutingKernel (R1–R4), AbstractModalEncoder (M1–M3)
 ```
 
-**`JEPA_DMN_Consolidation_Node`** — Live bridge writing committed JEPA trajectories into the DMN episodic memory store (ChromaDB). Expensive JEPA simulations become cheap long-term heuristics during sleep consolidation.
+**`JEPA_DMN_Consolidation_Node`** — Live bridge writing committed JEPA trajectories into any `AbstractDMN` implementation (from `lar-dmn`). Ingests committed trajectories as Tier 1 episodic events via `dmn.ingest()`; retrieves prior heuristics via `dmn.recall()`. Accepts any `AbstractDMN` subclass — or uses a local in-memory fallback for demos.
 
 **`CrystalJEPA`** — A real JEPA model for battery materials. Three-component architecture: `CrystalSiteEncoder` (2-layer Transformer over 20 elemental sites), EMA `TargetEncoder` (no gradients), and a `Predictor` that maps visible-site context to masked-site representations. Trained with JEPA loss — MSE in latent space with stop-gradient on the target. 68,736 parameters. Trains to 97% loss reduction in 61 seconds on CPU. Interchangeable with any `AbstractManifold` implementation — GNN, physics-informed net, or simulation engine.
 
