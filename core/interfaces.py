@@ -45,6 +45,17 @@ class AbstractCognitiveNode(ABC):
           A RouterNode inspects GraphState and selects between LLMNode and
           JEPANode (or any two AbstractCognitiveNode subclasses) based on
           task type determined at runtime.
+
+    Invariant properties verified by the behavioral test suite
+    (lar_jepa/tests/unit/test_cognitive_manifold_router_invariants.py):
+        CN1. encode() -> forward() -> decode() compose end to end for any
+             concrete node, each stage consuming the previous stage's real
+             output.
+        CN2. output_signal_type is a fixed SignalType, identical across
+             repeated access.
+        CN3. model_type correctly isolates genuinely different architectures
+             from one another, and correctly unifies genuinely same-family
+             models (e.g. two different LLMs sharing ModelType.LLM).
     """
 
     #: Subclasses declare their model type for routing-layer introspection.
@@ -160,6 +171,15 @@ class AbstractManifold(AbstractCognitiveNode):
         encode()  → embed_context()
         forward() → predict_target(context, action_vector=None) [stationary]
         decode()  → returns the latent representation directly by default.
+
+    Invariant properties verified by the behavioral test suite
+    (lar_jepa/tests/unit/test_cognitive_manifold_router_invariants.py):
+        MF1. embed_context(x).shape[-1] == predict_target(z, a).shape[-1]
+             -- context and target share one latent dimension.
+        MF2. embed_context(x) is deterministic for the same x at inference
+             time.
+        MF3. predict_target does not collapse genuinely different contexts
+             to the same (or a constant/zero) output.
     """
 
     model_type = ModelType.JEPA
@@ -600,6 +620,18 @@ class AbstractEntropicRouter(ABC):
     model-type routing (choosing between LLMNode and JEPANode based on task
     type, for example), use the standard Lár RouterNode with a Python
     decision function that reads GraphState directly.
+
+    Invariant properties verified by the behavioral test suite
+    (lar_jepa/tests/unit/test_cognitive_manifold_router_invariants.py):
+        ER1. evaluate_state() returns exactly one member of RouteDecision
+             for every input -- the router-level analogue of
+             AbstractDivergenceRouter's V5 (Routing Completeness).
+        ER2. A calibration procedure's thresholds are derived from the
+             concrete implementation's own sampled data distribution, not
+             hardcoded constants.
+        ER3. Increasing entropic deviation never decreases route severity
+             (COMMIT_TRAJECTORY <= TRIGGER_REPLAN <= STRUCTURAL_IMPASSE).
+        ER4. The same predicted_state always yields the same RouteDecision.
     """
 
     @abstractmethod
